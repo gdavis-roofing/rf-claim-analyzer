@@ -715,7 +715,9 @@ async function generatePDF() {
     acvContracted += i.acv || 0;
   });
 
-  const oop = Math.max(0, deductible + nonRecDepContracted);
+  let declinedACV = 0;
+  declinedItems.forEach(i => { declinedACV += i.acv || 0; });
+  const oop = Math.max(0, deductible + nonRecDepContracted - declinedACV);
   // 1st check = summaryACV - deductible (simple, always correct)
   const firstCheckACV = parsedData.summaryACV || 0;
   const paidByInsurance = Math.max(0, firstCheckACV - deductible);

@@ -2,965 +2,689 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RF Claim Scope Analyzer</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0f172a">
+<title>RF Storm Canvass</title>
+<link rel="manifest" href="manifest.json">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: Arial, sans-serif; background: #1a1a1a; color: #fff; min-height: 100vh; }
-
-  /* HEADER */
-  .header {
-    background: #CC1414;
-    padding: 14px 24px;
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  :root {
+    --bg: #0f172a;
+    --surface: #1e293b;
+    --surface2: #273348;
+    --border: #334155;
+    --text: #f1f5f9;
+    --muted: #94a3b8;
+    --hot: #ef4444;
+    --hot-bg: rgba(239,68,68,0.12);
+    --hot-border: rgba(239,68,68,0.3);
+    --warm: #f59e0b;
+    --warm-bg: rgba(245,158,11,0.12);
+    --warm-border: rgba(245,158,11,0.3);
+    --green: #22c55e;
+    --blue: #3b82f6;
+    --purple: #a855f7;
+    --radius: 12px;
+    --font: 'DM Sans', sans-serif;
+    --mono: 'DM Mono', monospace;
   }
-  .header-logo { font-size: 22px; font-weight: 900; letter-spacing: -0.5px; color: #fff; }
-  .header-logo span { color: rgba(255,255,255,0.6); font-weight: 400; font-size: 14px; margin-left: 8px; }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font); overflow: hidden; }
 
-  /* MAIN LAYOUT */
-  .layout { display: flex; height: calc(100vh - 54px); }
+  /* ── APP SHELL ── */
+  #app { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
 
-  /* SIDEBAR */
-  .sidebar {
-    width: 300px;
-    background: #222;
-    border-right: 1px solid #333;
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    overflow-y: auto;
+  /* ── HEADER ── */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 16px 10px;
     flex-shrink: 0;
   }
+  .header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .logo { display: flex; align-items: center; gap: 8px; }
+  .logo-icon { width: 32px; height: 32px; background: var(--hot); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+  .logo-text { font-size: 15px; font-weight: 700; letter-spacing: -0.3px; }
+  .logo-sub { font-size: 11px; color: var(--muted); font-weight: 400; }
+  .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+  .sync-dot.offline { background: var(--muted); box-shadow: none; animation: none; }
 
-  .sidebar-section { display: flex; flex-direction: column; gap: 8px; }
-  .sidebar-title { font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #888; margin-bottom: 4px; }
-
-  .field-group { display: flex; flex-direction: column; gap: 4px; }
-  .field-label { font-size: 11px; color: #888; }
-  .field-input {
-    background: #2d2d2d;
-    border: 1px solid #444;
-    border-radius: 6px;
-    color: #fff;
-    font-size: 13px;
-    padding: 8px 10px;
-    outline: none;
-    transition: border-color 0.15s;
-    width: 100%;
+  /* ── TABS ── */
+  .tabs { display: flex; gap: 6px; }
+  .tab {
+    flex: 1; padding: 8px 0; border-radius: 8px; border: 1px solid var(--border);
+    background: transparent; color: var(--muted); font-family: var(--font);
+    font-size: 13px; font-weight: 600; cursor: pointer; transition: all .15s;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
   }
-  .field-input:focus { border-color: #CC1414; }
-  .field-input.auto-filled { border-color: #2a6e2a; background: #1e2e1e; }
+  .tab.active-hot { background: var(--hot-bg); border-color: var(--hot-border); color: var(--hot); }
+  .tab.active-warm { background: var(--warm-bg); border-color: var(--warm-border); color: var(--warm); }
+  .tab .badge { background: currentColor; color: var(--bg); border-radius: 20px; padding: 1px 6px; font-size: 11px; font-weight: 700; }
 
-  /* UPLOAD ZONE */
-  .upload-zone {
-    border: 2px dashed #444;
-    border-radius: 10px;
-    padding: 24px 16px;
-    text-align: center;
+  /* ── SEARCH BAR ── */
+  .search-bar {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+    display: flex; align-items: center; gap: 8px; padding: 0 12px; margin: 10px 16px 0;
+    flex-shrink: 0;
+  }
+  .search-bar input {
+    flex: 1; background: none; border: none; outline: none; color: var(--text);
+    font-family: var(--font); font-size: 14px; padding: 9px 0;
+  }
+  .search-bar input::placeholder { color: var(--muted); }
+  .search-icon { color: var(--muted); font-size: 14px; }
+
+  /* ── STATS BAR ── */
+  .stats-bar {
+    display: flex; gap: 8px; padding: 10px 16px 0; flex-shrink: 0;
+  }
+  .stat-pill {
+    flex: 1; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 6px 8px; text-align: center;
+  }
+  .stat-pill .num { font-size: 18px; font-weight: 700; font-family: var(--mono); }
+  .stat-pill .lbl { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+  .stat-pill.green .num { color: var(--green); }
+  .stat-pill.blue .num { color: var(--blue); }
+  .stat-pill.purple .num { color: var(--purple); }
+
+  /* ── LEAD LIST ── */
+  #list { flex: 1; overflow-y: auto; padding: 10px 16px 80px; -webkit-overflow-scrolling: touch; }
+  #list::-webkit-scrollbar { display: none; }
+
+  .lead-card {
+    background: var(--surface); border-radius: var(--radius); margin-bottom: 10px;
+    border: 1px solid var(--border); overflow: hidden; transition: border-color .15s;
     cursor: pointer;
-    transition: all 0.2s;
-    background: #2a2a2a;
   }
-  .upload-zone:hover, .upload-zone.drag-over { border-color: #CC1414; background: #2d1a1a; }
-  .upload-zone .upload-icon { font-size: 32px; margin-bottom: 8px; }
-  .upload-zone .upload-text { font-size: 13px; color: #aaa; }
-  .upload-zone .upload-text strong { color: #fff; display: block; margin-bottom: 4px; }
-  #fileInput { display: none; }
+  .lead-card.hot { border-left: 3px solid var(--hot); }
+  .lead-card.warm { border-left: 3px solid var(--warm); }
+  .lead-card.status-spoke { border-left-color: var(--green); }
+  .lead-card.status-inspection { border-left-color: var(--purple); }
+  .lead-card.status-not-interested { opacity: .5; }
 
-  .file-selected {
-    background: #1e2e1e;
-    border: 1px solid #2a6e2a;
-    border-radius: 8px;
-    padding: 10px 12px;
-    font-size: 12px;
-    color: #4caf50;
-    display: none;
-    align-items: center;
-    gap: 8px;
+  .card-header { display: flex; align-items: flex-start; justify-content: space-between; padding: 12px 14px 8px; gap: 10px; }
+  .card-name { font-size: 14px; font-weight: 600; line-height: 1.3; }
+  .card-address { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .card-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
+  .hail-badge { font-size: 13px; font-weight: 700; font-family: var(--mono); }
+  .hail-badge.big { color: var(--hot); }
+  .hail-badge.med { color: var(--warm); }
+  .tier-label {
+    font-size: 9px; font-weight: 700; letter-spacing: 1px; padding: 2px 6px;
+    border-radius: 4px; text-transform: uppercase;
   }
-  .file-selected.show { display: flex; }
+  .tier-label.hot { background: var(--hot-bg); color: var(--hot); border: 1px solid var(--hot-border); }
+  .tier-label.warm { background: var(--warm-bg); color: var(--warm); border: 1px solid var(--warm-border); }
 
-  /* PARSE BUTTON */
-  .parse-btn {
-    background: #CC1414;
-    color: #fff;
-    border: none;
-    border-radius: 8px;
-    padding: 12px;
-    font-size: 14px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: background 0.15s;
-    width: 100%;
+  .card-meta { display: flex; gap: 8px; padding: 0 14px 10px; flex-wrap: wrap; }
+  .meta-tag {
+    font-size: 11px; color: var(--muted); background: var(--surface2);
+    padding: 3px 7px; border-radius: 5px;
   }
-  .parse-btn:hover:not(:disabled) { background: #aa1010; }
-  .parse-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-  /* SPINNER */
-  .spinner-wrap { text-align: center; padding: 10px; display: none; }
-  .spinner-wrap.show { display: block; }
-  .spinner {
-    display: inline-block;
-    width: 28px; height: 28px;
-    border: 3px solid #444;
-    border-top-color: #CC1414;
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
+  /* ── STATUS BUTTONS ── */
+  .status-row { display: flex; gap: 6px; padding: 0 14px 12px; flex-wrap: wrap; }
+  .status-btn {
+    font-size: 11px; font-weight: 600; font-family: var(--font);
+    padding: 6px 10px; border-radius: 7px; border: 1px solid var(--border);
+    background: var(--surface2); color: var(--muted); cursor: pointer;
+    transition: all .12s; white-space: nowrap;
   }
-  .spinner-text { font-size: 12px; color: #888; margin-top: 6px; }
+  .status-btn:hover { opacity: .85; }
+  .status-btn.active { color: var(--bg); }
+  .status-btn[data-s="no-answer"].active { background: #64748b; border-color: #64748b; color: #fff; }
+  .status-btn[data-s="not-home"].active { background: #f59e0b; border-color: #f59e0b; color: #000; }
+  .status-btn[data-s="spoke"].active { background: var(--green); border-color: var(--green); color: #000; }
+  .status-btn[data-s="inspection"].active { background: var(--purple); border-color: var(--purple); }
+  .status-btn[data-s="not-interested"].active { background: #ef4444; border-color: #ef4444; }
+
+  /* ── NOTES ── */
+  .notes-row { padding: 0 14px 12px; display: none; }
+  .notes-row.open { display: block; }
+  .notes-input {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text); font-family: var(--font); font-size: 13px;
+    padding: 8px 10px; outline: none; resize: none; min-height: 60px;
+    transition: border-color .15s;
+  }
+  .notes-input:focus { border-color: var(--blue); }
+  .notes-save-row { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; }
+  .notes-save-row .ts { font-size: 11px; color: var(--muted); font-family: var(--mono); }
+  .save-btn {
+    background: var(--blue); color: white; border: none; border-radius: 7px;
+    padding: 6px 14px; font-family: var(--font); font-size: 12px; font-weight: 600;
+    cursor: pointer; transition: opacity .15s;
+  }
+  .save-btn:hover { opacity: .85; }
+
+  /* ── ACTION ROW ── */
+  .action-row { display: flex; gap: 8px; padding: 0 14px 12px; }
+  .action-btn {
+    flex: 1; padding: 8px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--surface2); color: var(--text); font-family: var(--font);
+    font-size: 12px; font-weight: 600; cursor: pointer; transition: all .12s;
+    display: flex; align-items: center; justify-content: center; gap: 5px;
+  }
+  .action-btn.call { color: var(--green); border-color: rgba(34,197,94,.3); }
+  .action-btn.map { color: var(--blue); border-color: rgba(59,130,246,.3); }
+  .action-btn.notes { color: var(--muted); }
+  .action-btn.notes.open-notes { color: var(--blue); border-color: rgba(59,130,246,.3); }
+
+  /* ── ROUTE BUTTON ── */
+  #route-fab {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: var(--blue); color: white; border: none; border-radius: 24px;
+    padding: 13px 24px; font-family: var(--font); font-size: 14px; font-weight: 700;
+    cursor: pointer; display: flex; align-items: center; gap: 8px; z-index: 100;
+    box-shadow: 0 4px 20px rgba(59,130,246,.4); transition: all .15s;
+    white-space: nowrap;
+  }
+  #route-fab:hover { background: #2563eb; transform: translateX(-50%) translateY(-2px); }
+  #route-fab .sel-count { background: rgba(255,255,255,.25); border-radius: 12px; padding: 2px 8px; font-size: 12px; }
+
+  /* ── SELECT OVERLAY ── */
+  .select-overlay {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(59,130,246,.08); border-radius: var(--radius);
+    pointer-events: none; opacity: 0; transition: opacity .12s;
+  }
+  .lead-card.selected .select-overlay { opacity: 1; }
+  .lead-card.selected { border-color: rgba(59,130,246,.5) !important; }
+  .select-check {
+    position: absolute; top: 10px; right: 10px; width: 20px; height: 20px;
+    border-radius: 50%; background: var(--surface2); border: 2px solid var(--border);
+    display: flex; align-items: center; justify-content: center; font-size: 11px;
+    transition: all .12s;
+  }
+  .lead-card.selected .select-check { background: var(--blue); border-color: var(--blue); }
+  .card-inner { position: relative; }
+
+  /* ── SELECT MODE BANNER ── */
+  #select-banner {
+    display: none; background: var(--blue); padding: 8px 16px;
+    flex-shrink: 0; align-items: center; justify-content: space-between;
+  }
+  #select-banner.visible { display: flex; }
+  #select-banner span { font-size: 13px; font-weight: 600; }
+  #select-banner button {
+    background: rgba(255,255,255,.2); border: none; color: white; border-radius: 6px;
+    padding: 4px 10px; font-size: 12px; cursor: pointer; font-family: var(--font);
+  }
+
+  /* ── ROUTE MODE ── */
+  .route-mode .status-row, .route-mode .notes-row, .route-mode .action-row { display: none !important; }
+
+  /* ── EMPTY STATE ── */
+  .empty { text-align: center; padding: 60px 20px; color: var(--muted); }
+  .empty .icon { font-size: 40px; margin-bottom: 12px; }
+  .empty p { font-size: 14px; }
+
+  /* ── LOADING ── */
+  #loading { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; gap: 16px; }
+  .spinner { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--blue); border-radius: 50%; animation: spin .6s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
+  #loading p { color: var(--muted); font-size: 14px; }
 
-  /* SUMMARY CARDS */
-  .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  .summary-card {
-    background: #2a2a2a;
-    border: 1px solid #333;
-    border-radius: 8px;
-    padding: 10px 12px;
+  /* ── TOAST ── */
+  #toast {
+    position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 10px 18px; font-size: 13px; font-weight: 500;
+    opacity: 0; transition: all .2s; z-index: 200; white-space: nowrap;
+    box-shadow: 0 4px 20px rgba(0,0,0,.3);
   }
-  .summary-card.highlight { background: #2d1a1a; border-color: #CC1414; }
-  .summary-card.green { background: #1a2d1a; border-color: #2a6e2a; }
-  .summary-card .s-label { font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
-  .summary-card .s-value { font-size: 16px; font-weight: 700; color: #fff; }
-  .summary-card.highlight .s-value { color: #ff6b6b; }
-  .summary-card.green .s-value { color: #4caf50; }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #toast.success { border-color: var(--green); color: var(--green); }
+  #toast.error { border-color: var(--hot); color: var(--hot); }
 
-  /* FINANCIAL BREAKDOWN BOX - 3 side-by-side */
-  .oop-box { display: none; }
-  .oop-box.show { display: flex; gap: 6px; }
-  .fin-card { flex: 1; border-radius: 8px; padding: 8px 10px; min-width: 0; }
-  .fin-card.green-card { background: #1a2d1a; border: 1px solid #2a6e2a; }
-  .fin-card.red-card { background: #2d1a1a; border: 1px solid #8a2a2a; }
-  .fin-label { font-size: 9px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: #aaa; margin-bottom: 3px; }
-  .fin-val { font-size: 15px; font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .fin-card.green-card .fin-val { color: #4caf50; }
-  .fin-card.red-card .fin-val { color: #ff6b6b; }
-  .fin-sub { font-size: 9px; color: #555; margin-top: 2px; line-height: 1.3; }
-
-  /* GENERATE PDF BUTTON */
-  .gen-btn {
-    background: #333;
-    color: #fff;
-    border: 1px solid #555;
-    border-radius: 8px;
-    padding: 12px;
-    font-size: 13px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.15s;
-    width: 100%;
-    display: none;
-  }
-  .gen-btn.show { display: block; }
-  .gen-btn:hover { background: #444; border-color: #CC1414; }
-
-  /* MAIN CONTENT */
-  .main { flex: 1; overflow-y: auto; padding: 20px; }
-
-  /* POLICY BADGE */
-  .policy-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    background: #2a2a2a;
-    border: 1px solid #444;
-    border-radius: 20px;
-    padding: 6px 14px;
-    font-size: 13px;
-    margin-bottom: 16px;
-  }
-  .badge-dot { width: 8px; height: 8px; border-radius: 50%; background: #888; }
-  .badge-dot.rcv { background: #4caf50; }
-  .badge-dot.acv { background: #ff6b6b; }
-  .badge-dot.mixed { background: #ffa726; }
-
-  /* SECTION HEADER */
-  .section-header {
-    background: #2a2a2a;
-    border-left: 3px solid #CC1414;
-    padding: 8px 14px;
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-    color: #ccc;
-    margin-bottom: 2px;
-    margin-top: 16px;
-    text-transform: uppercase;
-  }
-
-  /* LINE ITEMS TABLE */
-  .items-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  .items-table th {
-    background: #2a2a2a;
-    padding: 8px 10px;
-    text-align: left;
-    font-size: 11px;
-    color: #888;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    border-bottom: 1px solid #333;
-    position: sticky;
-    top: 0;
-    z-index: 1;
-  }
-  .items-table th.num { text-align: right; }
-  .items-table td {
-    padding: 8px 10px;
-    border-bottom: 1px solid #2a2a2a;
-    vertical-align: middle;
-  }
-  .items-table tr:hover td { background: #252525; }
-  .items-table tr.declined td { opacity: 0.45; text-decoration: line-through; }
-  .items-table tr.declined td.no-strike { text-decoration: none; opacity: 1; }
-  .items-table td.num { text-align: right; font-family: monospace; font-size: 12px; }
-  .items-table td.desc { max-width: 260px; }
-  .items-table td.qty { color: #aaa; font-size: 12px; white-space: nowrap; }
-  .dep-rec { color: #4caf50; }
-  .dep-nonrec { color: #ff6b6b; }
-
-  /* CHECKBOX */
-  .decline-cb { width: 16px; height: 16px; cursor: pointer; accent-color: #CC1414; }
-
-  /* EMPTY STATE */
-  .empty-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    gap: 12px;
-    color: #555;
-  }
-  .empty-state .big-icon { font-size: 64px; }
-  .empty-state p { font-size: 15px; }
-
-  /* ERROR */
-  .error-box {
-    background: #2d1a1a;
-    border: 1px solid #8a2a2a;
-    border-radius: 8px;
-    padding: 14px;
-    color: #ff8888;
-    font-size: 13px;
-    display: none;
-  }
-  .error-box.show { display: block; }
-
-  /* DISCLAIMER */
-  .disclaimer-box {
-    background: #1e1e2d;
-    border: 1px solid #444;
-    border-radius: 8px;
-    padding: 10px 12px;
-    font-size: 11px;
-    color: #888;
-    line-height: 1.5;
-  }
-
-  /* SCROLLBAR */
-  ::-webkit-scrollbar { width: 6px; }
-  ::-webkit-scrollbar-track { background: #1a1a1a; }
-  ::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+  /* ── LONG HOLD HINT ── */
+  .hint-bar { text-align: center; padding: 4px 0 0; font-size: 11px; color: var(--muted); flex-shrink: 0; }
 </style>
 </head>
 <body>
-
-<div class="header">
-  <div class="header-logo">RF <span>Claim Scope Analyzer</span></div>
-</div>
-
-<div class="layout">
-
-  <!-- SIDEBAR -->
-  <div class="sidebar">
-
-    <!-- UPLOAD -->
-    <div class="sidebar-section">
-      <div class="sidebar-title">Upload Claim PDF</div>
-      <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
-        <div class="upload-icon">📄</div>
-        <div class="upload-text">
-          <strong>Click to select PDF</strong>
-          or drag and drop
+<div id="app">
+  <header>
+    <div class="header-top">
+      <div class="logo">
+        <div class="logo-icon">⚡</div>
+        <div>
+          <div class="logo-text">Storm Canvass</div>
+          <div class="logo-sub">Roofing Force · Mar 10 2026</div>
         </div>
       </div>
-      <input type="file" id="fileInput" accept=".pdf">
-      <div class="file-selected" id="fileSelected">
-        <span>✓</span>
-        <span id="fileName"></span>
-      </div>
-      <div class="error-box" id="errorBox"></div>
-      <button class="parse-btn" id="parseBtn" onclick="parseClaim()" disabled>Analyze Claim</button>
-      <div class="spinner-wrap" id="spinnerWrap">
-        <div class="spinner"></div>
-        <div class="spinner-text">Reading claim...</div>
-      </div>
+      <div id="sync-dot" class="sync-dot offline" title="Supabase sync"></div>
     </div>
-
-    <!-- CLAIM INFO -->
-    <div class="sidebar-section" id="claimInfoSection">
-      <div class="sidebar-title">Claim Information</div>
-      <div class="field-group">
-        <div class="field-label">Customer Name</div>
-        <input class="field-input" id="customerName" type="text" placeholder="Will auto-fill from claim">
-      </div>
-      <div class="field-group">
-        <div class="field-label">Property Address</div>
-        <input class="field-input" id="customerAddress" type="text" placeholder="Will auto-fill from claim">
-      </div>
-      <div class="field-group">
-        <div class="field-label">Claim Number</div>
-        <input class="field-input" id="claimNumber" type="text" placeholder="Will auto-fill from claim">
-      </div>
-      <div class="field-group">
-        <div class="field-label">Deductible</div>
-        <input class="field-input" id="deductible" type="number" placeholder="Will auto-fill from claim" oninput="recalcOOP()">
-      </div>
+    <div class="tabs">
+      <button class="tab active-hot" onclick="setTab('HOT')" id="tab-hot">
+        🔥 HOT <span class="badge" id="hot-badge">35</span>
+      </button>
+      <button class="tab" onclick="setTab('WARM')" id="tab-warm">
+        ☀️ WARM <span class="badge" id="warm-badge">41</span>
+      </button>
     </div>
+  </header>
 
-    <!-- SUMMARY -->
-    <div class="sidebar-section" id="summarySection" style="display:none">
-      <div class="sidebar-title">Claim Summary</div>
-      <div class="summary-grid">
-        <div class="summary-card">
-          <div class="s-label">Total RCV</div>
-          <div class="s-value" id="sumRCV">—</div>
-        </div>
-        <div class="summary-card">
-          <div class="s-label">Total ACV</div>
-          <div class="s-value" id="sumACV">—</div>
-        </div>
-        <div class="summary-card highlight">
-          <div class="s-label">Non-Rec Dep</div>
-          <div class="s-value" id="sumNonRec">—</div>
-        </div>
-        <div class="summary-card green">
-          <div class="s-label">Rec Dep</div>
-          <div class="s-value" id="sumRec">—</div>
-        </div>
-        <div class="summary-card">
-          <div class="s-label">Net Claim</div>
-          <div class="s-value" id="sumNet">—</div>
-        </div>
-        <div class="summary-card green">
-          <div class="s-label">If Recovered</div>
-          <div class="s-value" id="sumRecovered">—</div>
-        </div>
-        <div class="summary-card" id="priorPayCard" style="display:none;grid-column:span 2">
-          <div class="s-label">Prior Payments</div>
-          <div class="s-value" id="sumPrior">—</div>
-        </div>
-      </div>
+  <div id="select-banner">
+    <span id="select-count-text">0 selected</span>
+    <div style="display:flex;gap:8px">
+      <button onclick="openGoogleMapsRoute()">📍 Open in Maps</button>
+      <button onclick="exitSelectMode()">✕ Cancel</button>
     </div>
-
-    <!-- FINANCIAL BREAKDOWN - 3 boxes side by side -->
-    <div class="oop-box" id="oopBox">
-      <div class="fin-card green-card">
-        <div class="fin-label">&#x1F4B0; 1st Check</div>
-        <div class="fin-val" id="firstCheck">$0.00</div>
-        <div class="fin-sub">ACV (excl. PWI) &minus; deductible</div>
-      </div>
-      <div class="fin-card green-card">
-        <div class="fin-label">&#x1F4B0; 2nd Check</div>
-        <div class="fin-val" id="secondCheck">$0.00</div>
-        <div class="fin-sub">Rec dep + PWI performed</div>
-      </div>
-      <div class="fin-card red-card">
-        <div class="fin-label">&#x1F3E0; Out of Pocket</div>
-        <div class="fin-val" id="oopValue">$0.00</div>
-        <div class="fin-sub">Deductible + non-rec dep</div>
-      </div>
-    </div>
-
-    <!-- DISCLAIMER -->
-    <div class="disclaimer-box" id="disclaimerBox">
-      <strong style="color:#aaa">Non-Covered Items</strong> necessary to complete the Project that are outside of the coverage of your insurance policy, including but is not limited to: rotten decking and/or facia, hidden damage, etc., will be your responsibility to pay.
-    </div>
-
-    <!-- GENERATE PDF -->
-    <button class="gen-btn" id="genBtn" onclick="generatePDF()">📄 Generate Customer Report</button>
-
-  </div><!-- /sidebar -->
-
-  <!-- MAIN CONTENT -->
-  <div class="main" id="mainContent">
-    <div class="empty-state" id="emptyState">
-      <div class="big-icon">🏠</div>
-      <p>Upload an insurance claim PDF to get started</p>
-    </div>
-    <div id="lineItemsArea" style="display:none"></div>
   </div>
 
-</div><!-- /layout -->
+  <div class="search-bar">
+    <span class="search-icon">🔍</span>
+    <input type="text" id="search" placeholder="Search name, address, ZIP…" oninput="renderList()">
+  </div>
+
+  <div class="stats-bar" id="stats-bar">
+    <div class="stat-pill green"><div class="num" id="stat-spoke">0</div><div class="lbl">Spoke To</div></div>
+    <div class="stat-pill purple"><div class="num" id="stat-insp">0</div><div class="lbl">Inspections</div></div>
+    <div class="stat-pill blue"><div class="num" id="stat-remain">0</div><div class="lbl">Remaining</div></div>
+  </div>
+
+  <div class="hint-bar">Hold card to add to route</div>
+
+  <div id="list">
+    <div id="loading">
+      <div class="spinner"></div>
+      <p>Loading leads…</p>
+    </div>
+  </div>
+
+  <button id="route-fab" style="display:none" onclick="toggleSelectMode()">
+    📍 Plan Route <span class="sel-count" id="fab-count">0</span>
+  </button>
+</div>
+
+<div id="toast"></div>
 
 <script>
-let parsedData = null;
-let selectedFile = null;
+// ═══════════════════════════════════════════════
+// CONFIG — replace with your Supabase credentials
+// ═══════════════════════════════════════════════
+const SUPABASE_URL = 'https://inwtlvzkwaslofqfrlpc.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlud3Rsdnprd2FzbG9mcWZybHBjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MzI2NDcsImV4cCI6MjA4ODMwODY0N30.bpjIExAjKo54a4X8QqgR2gn6LpVseEYopXk2RGQdQrE';
+const TABLE_LEADS = 'storm_leads';
+const TABLE_UPDATES = 'lead_updates';
 
-// ── FILE HANDLING ──
-const fileInput = document.getElementById('fileInput');
-const uploadZone = document.getElementById('uploadZone');
+// ═══════════════════════════════════════════════
+// EMBEDDED LEAD DATA
+// ═══════════════════════════════════════════════
+const SEED_LEADS = [{"id":1,"tier":"HOT","score":13,"name":"Cathy Statler","phone":"815-603-2765","email":"cath1960@comcast.net","address":"Bishop Ct, Bradley, IL 60915","street":"Bishop Ct","city":"Bradley","state":"IL","zip":"60915","manufacturer":"Boral","profile":"Pine Crest Shake","color":"Ironwood","size_sq":"21","hail_met":"5.5","hail_algo":"4","wind":""},{"id":2,"tier":"HOT","score":12,"name":"Ed & Julie Dougherty","phone":"816-805-2853","email":"Alt Phone: 816-891-9990","address":"NW Klamm Dr, KCMO, MO 64151","street":"NW Klamm Dr","city":"KCMO","state":"MO","zip":"64151","manufacturer":"Boral","profile":"Shake","color":"Driftwood","size_sq":"74","hail_met":"3.5","hail_algo":"3.5","wind":""},{"id":3,"tier":"HOT","score":12,"name":"Paul Bunnell","phone":"913-530-0651","email":"Alt Phone: 86-941-2056","address":"NW Tiffany Springs Rd, KCMO, MO 64154","street":"NW Tiffany Springs Rd","city":"KCMO","state":"MO","zip":"64154","manufacturer":"Boral","profile":"Barrel Vault","color":"Devonshire","size_sq":"49","hail_met":"3.5","hail_algo":"2.75","wind":""},{"id":4,"tier":"HOT","score":12,"name":"Bethany Snyder","phone":"913-461-7614","email":"kcnovels@msn.com","address":"Georgia Ave, Kansas City, KS 66109","street":"Georgia Ave","city":"Kansas City","state":"KS","zip":"66109","manufacturer":"Boral","profile":"Pacific Tile","color":"Timberwood","size_sq":"34.5","hail_met":"3.5","hail_algo":"2","wind":""},{"id":5,"tier":"HOT","score":12,"name":"Elizabeth Burt","phone":"385-444-8257","email":"elizabeth-burt@hotmail.com","address":"NW Blair Rd, KCMO, MO 64152","street":"NW Blair Rd","city":"KCMO","state":"MO","zip":"64152","manufacturer":"Boral","profile":"Pine Crest Shake","color":"Charcoal","size_sq":"16","hail_met":"3.5","hail_algo":"2.5","wind":""},{"id":6,"tier":"HOT","score":11,"name":"Ryan Terrones","phone":"515-203-6720","email":"terronesr@gmail.com","address":"Yecker Ave, Kansas City, KS 66109","street":"Yecker Ave","city":"Kansas City","state":"KS","zip":"66109","manufacturer":"Owens Corning","profile":"Duration","color":"Sand Dune","size_sq":"18.83","hail_met":"3.5","hail_algo":"3","wind":""},{"id":7,"tier":"HOT","score":11,"name":"Phillip Hernandez","phone":"913-302-7530","email":"","address":"N Mattox Rd, KCMO, MO 64151","street":"N Mattox Rd","city":"KCMO","state":"MO","zip":"64151","manufacturer":"Gerard","profile":"Gerard Tile","color":"Chestnut","size_sq":"55","hail_met":"3.5","hail_algo":"3.75","wind":""},{"id":8,"tier":"HOT","score":11,"name":"Dr. Charles Alexander","phone":"913-321-3355","email":"Alt Phone: 913-334-5531","address":"N 79 St, Kansas City, KS 66112","street":"N 79 St","city":"Kansas City","state":"KS","zip":"66112","manufacturer":"Boral","profile":"Tile","color":"Monte Carlo","size_sq":"42","hail_met":"2.5","hail_algo":"2.75","wind":""},{"id":9,"tier":"HOT","score":11,"name":"Michael & Marlene Jackson","phone":"913-549-0029","email":"mallenjackson@gmail.com","address":"Georgia Ave, Kansas City, KS 66109","street":"Georgia Ave","city":"Kansas City","state":"KS","zip":"66109","manufacturer":"Owens Corning","profile":"Duration","color":"Teak","size_sq":"19","hail_met":"3.5","hail_algo":"3","wind":""},{"id":10,"tier":"HOT","score":11,"name":"Deborah & Jermey Kobalt/Kailer","phone":"913-242-8995","email":"prairiesmurf@gmail.com","address":"N 89th St, Kansas City, KS 66109","street":"N 89th St","city":"Kansas City","state":"KS","zip":"66109","manufacturer":"Owens Corning","profile":"Oakridge","color":"Brownwood","size_sq":"18.82","hail_met":"3.5","hail_algo":"2.25","wind":""},{"id":11,"tier":"HOT","score":11,"name":"Dan Tellman","phone":"913-788-9008","email":"","address":"Beverly Dr, Kansas City, KS 66104","street":"Beverly Dr","city":"Kansas City","state":"KS","zip":"66104","manufacturer":"Boral","profile":"Tile","color":"Spanish Red","size_sq":"13","hail_met":"3.5","hail_algo":"3.25","wind":""},{"id":12,"tier":"HOT","score":11,"name":"Cleve McConnell","phone":"913-940-4459","email":"mrclevemcconnell@gmail.com","address":"N 70th Terrace, Kansas City, KS 66109","street":"N 70th Terrace","city":"Kansas City","state":"KS","zip":"66109","manufacturer":"Owens Corning","profile":"TruDefinition Duration AR","color":"Onyx Black","size_sq":"16","hail_met":"3.5","hail_algo":"3","wind":""},{"id":13,"tier":"HOT","score":11,"name":"Steve Easley","phone":"816-505-0214","email":"","address":"N Mattox Rd, KCMO, MO 64151","street":"N Mattox Rd","city":"KCMO","state":"MO","zip":"64151","manufacturer":"Boral","profile":"Shake","color":"Weathered Slate","size_sq":"49","hail_met":"3.5","hail_algo":"3.75","wind":""},{"id":14,"tier":"HOT","score":11,"name":"Ethan Sherwood","phone":"785-285-0785","email":"sherwood.ethan@gmail.com","address":"Creek View Dr, KCMO, MO 64152","street":"Creek View Dr","city":"KCMO","state":"MO","zip":"64152","manufacturer":"Owens Corning","profile":"Duration","color":"Estate Gray","size_sq":"18.74","hail_met":"3.5","hail_algo":"2.5","wind":""},{"id":15,"tier":"HOT","score":11,"name":"Dan Bernhart","phone":"816-741-9222","email":"","address":"NW 83 St, KCMO, MO 64152","street":"NW 83 St","city":"KCMO","state":"MO","zip":"64152","manufacturer":"Boral","profile":"Tile","color":"Choice","size_sq":"54","hail_met":"3.5","hail_algo":"2.75","wind":""},{"id":16,"tier":"HOT","score":11,"name":"Annalee Ford & Phillip John Anderson","phone":"417-838-9274","email":"aaf4824@gmail.com","address":"NW 80th St, KCMO, MO 64118","street":"NW 80th St","city":"KCMO","state":"MO","zip":"64118","manufacturer":"Owens Corning","profile":"Oakridge AR","color":"Driftwood","size_sq":"15.56","hail_met":"3.5","hail_algo":"2","wind":""},{"id":17,"tier":"HOT","score":11,"name":"Brian  Jones","phone":"248-207-3791","email":"brianj@proelect.com","address":"N Bedford Ave, KCMO, MO 64151","street":"N Bedford Ave","city":"KCMO","state":"MO","zip":"64151","manufacturer":"Owens Corning","profile":"Oakridge","color":"Estate Grey","size_sq":"26.21","hail_met":"3.5","hail_algo":"2.75","wind":""},{"id":18,"tier":"HOT","score":11,"name":"Richard & Ruth Hinton","phone":"(816) 729-6356","email":"richard.hinton1@icloud.com","address":"NW Berkley St, KCMO, MO 64152","street":"NW Berkley St","city":"KCMO","state":"MO","zip":"64152","manufacturer":"Owens Corning","profile":"Oakridge","color":"Driftwood","size_sq":"17.45","hail_met":"3.5","hail_algo":"3","wind":""},{"id":19,"tier":"HOT","score":11,"name":"Josh Rothermel","phone":"816-863-7115","email":"joshrothermel@outlook.com","address":"N Robinhood Ave, KCMO, MO 64154","street":"N Robinhood Ave","city":"KCMO","state":"MO","zip":"64154","manufacturer":"Owens Corning","profile":"Oakrige AR","color":"Driftwood","size_sq":"28.66","hail_met":"3.5","hail_algo":"2.5","wind":""},{"id":20,"tier":"HOT","score":11,"name":"Michael & Nicole Nigro","phone":"816-506-6439","email":"mnigro21@outlook.com","address":"N Baltimore Ave, KCMO, MO 64155","street":"N Baltimore Ave","city":"KCMO","state":"MO","zip":"64155","manufacturer":"Owens Corning","profile":"Oakridge AR","color":"Onyx Black","size_sq":"18.67","hail_met":"3.5","hail_algo":"2.25","wind":""},{"id":21,"tier":"HOT","score":11,"name":"Eric Sheridan","phone":"913-980-6895","email":"ericsheridan@mac.com","address":"NE 100th St, KCMO, MO 64155","street":"NE 100th St","city":"KCMO","state":"MO","zip":"64155","manufacturer":"Drexel","profile":"24 GA","color":"Matte Black","size_sq":"28.98","hail_met":"3.5","hail_algo":"2","wind":""},{"id":22,"tier":"HOT","score":11,"name":"Kenneth & Kathy McBride","phone":"816-741-4695","email":"","address":"NW 59th Ter, KCMO, MO 64151","street":"NW 59th Ter","city":"KCMO","state":"MO","zip":"64151","manufacturer":"Boral","profile":"Shake","color":"Weathered Slate","size_sq":"27","hail_met":"3.5","hail_algo":"3.75","wind":""},{"id":23,"tier":"HOT","score":11,"name":"James Dill","phone":"816-587-1864","email":"","address":"NW 62nd St, KCMO, MO 64151","street":"NW 62nd St","city":"KCMO","state":"MO","zip":"64151","manufacturer":"Boral","profile":"Tile","color":"Charcoal","size_sq":"17","hail_met":"3.5","hail_algo":"3.75","wind":""},{"id":24,"tier":"HOT","score":11,"name":"Michael G. & Janice L. Smith","phone":"816-587-7638","email":"","address":"NW 58 Terrace, KCMO, MO 64151","street":"NW 58 Terrace","city":"KCMO","state":"MO","zip":"64151","manufacturer":"Boral","profile":"Canyon Shake","color":"Country Blend","size_sq":"27","hail_met":"3.5","hail_algo":"3.5","wind":""},{"id":25,"tier":"HOT","score":11,"name":"Rembrandts Restaurant - Brad Green","phone":"913-436-8700","email":"","address":"NW Barry Rd, KCMO, MO 64154","street":"NW Barry Rd","city":"KCMO","state":"MO","zip":"64154","manufacturer":"Boral","profile":"Shake","color":"Driftwood","size_sq":"32","hail_met":"3.5","hail_algo":"2.5","wind":""},{"id":26,"tier":"HOT","score":11,"name":"William Gazall","phone":"816-665-9752","email":"wmgazall@outlook.com","address":"N Central St, KCMO, MO 64155","street":"N Central St","city":"KCMO","state":"MO","zip":"64155","manufacturer":"Owens Corning","profile":"Oakridge AR","color":"Driftwood","size_sq":"20.94","hail_met":"3.5","hail_algo":"2.25","wind":""},{"id":27,"tier":"HOT","score":11,"name":"Bryan Koons","phone":"816-868-7624","email":"","address":"N Chatham Ave, KCMO, MO 64151","street":"N Chatham Ave","city":"KCMO","state":"MO","zip":"64151","manufacturer":"Gerard","profile":"Canyon Shake","color":"Windsor","size_sq":"60","hail_met":"3.5","hail_algo":"3.75","wind":""},{"id":28,"tier":"HOT","score":11,"name":"David Filbert","phone":"816-522-8178","email":"david.filbert@gmail.com","address":"N 60 St, Kansas City, KS 66104","street":"N 60 St","city":"Kansas City","state":"KS","zip":"66104","manufacturer":"AG","profile":"26","color":"Burnished Slate","size_sq":"17.42","hail_met":"3.5","hail_algo":"3.25","wind":""},{"id":29,"tier":"HOT","score":11,"name":"Kyeong Choe","phone":"816-506-8188","email":"kchoe@midlandradio.com","address":"NW View Crest Dr, KCMO, MO 64155","street":"NW View Crest Dr","city":"KCMO","state":"MO","zip":"64155","manufacturer":"Certainteed","profile":"Landmark","color":"Mission Brown","size_sq":"24","hail_met":"3.5","hail_algo":"2","wind":""},{"id":30,"tier":"HOT","score":11,"name":"Bruce Hahn","phone":"816-587-1663","email":"","address":"N Dawn Ct, KCMO, MO 64151","street":"N Dawn Ct","city":"KCMO","state":"MO","zip":"64151","manufacturer":"Gerard","profile":"Stonewood Shake","color":"Coronado","size_sq":"25","hail_met":"3.5","hail_algo":"3.5","wind":""},{"id":31,"tier":"HOT","score":11,"name":"Teresa Loar","phone":"816-863-2552","email":"taloar@aol.com","address":"NW Bradford Ct, KCMO, MO 64151","street":"NW Bradford Ct","city":"KCMO","state":"MO","zip":"64151","manufacturer":"GAF","profile":"Timberline HD AR","color":"Terra Bronze","size_sq":"13","hail_met":"3.5","hail_algo":"2.25","wind":""},{"id":32,"tier":"HOT","score":11,"name":"Matt Mondt","phone":"816-517-5670","email":"mwmind81@gmail.com","address":"NW Coronado St, KCMO, MO 64152","street":"NW Coronado St","city":"KCMO","state":"MO","zip":"64152","manufacturer":"Owens Corning","profile":"Oakridge AR","color":"Brownwood","size_sq":"13.86","hail_met":"3.5","hail_algo":"2.75","wind":""},{"id":33,"tier":"HOT","score":11,"name":"LaQuinta Inn","phone":"816-447-6691","email":"","address":"NW 83 St, KCMO, MO 64152","street":"NW 83 St","city":"KCMO","state":"MO","zip":"64152","manufacturer":"Gerard","profile":"Granit Ridge","color":"Spanish Red","size_sq":"160","hail_met":"3.5","hail_algo":"2.75","wind":""},{"id":34,"tier":"HOT","score":11,"name":"Temesgen Wakwaya","phone":"816-741-3125","email":"","address":"N Camden Ave, KCMO, MO 64151","street":"N Camden Ave","city":"KCMO","state":"MO","zip":"64151","manufacturer":"Boral","profile":"Tile","color":"Terra Cotta","size_sq":"39","hail_met":"3.5","hail_algo":"3.75","wind":""},{"id":35,"tier":"HOT","score":11,"name":"Michael Janicke","phone":"816-436-5159","email":"","address":"NE 88th St, KCMO, MO 64155","street":"NE 88th St","city":"KCMO","state":"MO","zip":"64155","manufacturer":"Gerard","profile":"Guardian","color":"Weathered Slate","size_sq":"23","hail_met":"3.5","hail_algo":"1.5","wind":""},{"id":36,"tier":"WARM","score":10,"name":"Edward Gibbs","phone":"913-299-4123","email":"","address":"N 75th Terrace, Kansas City, KS 66109","street":"N 75th Terrace","city":"Kansas City","state":"KS","zip":"66109","manufacturer":"GAF","profile":"Liberty","color":"Black","size_sq":"4","hail_met":"3.5","hail_algo":"3","wind":""},{"id":37,"tier":"WARM","score":10,"name":"Collin Reed","phone":"816-805-2871","email":"","address":"N Tracy Ave, KCMO, MO 64155","street":"N Tracy Ave","city":"KCMO","state":"MO","zip":"64155","manufacturer":"Certainteed","profile":"Presidential Ultra","color":"Charcoal Black","size_sq":"19","hail_met":"3.5","hail_algo":"1.75","wind":""},{"id":38,"tier":"WARM","score":10,"name":"Jeff & Aubrey Holmes","phone":"816-923-7944","email":"","address":"NW Winter Ave, KCMO, MO 64153","street":"NW Winter Ave","city":"KCMO","state":"MO","zip":"64153","manufacturer":"Boral","profile":"Granite Ridge","color":"Weathered Slate","size_sq":"24","hail_met":"2.5","hail_algo":"3","wind":""},{"id":39,"tier":"WARM","score":10,"name":"Kim Sutten","phone":"816-507-9277","email":"suttenkim@gmail.com","address":"NW Evelyn St, KCMO, MO 64151","street":"NW Evelyn St","city":"KCMO","state":"MO","zip":"64151","manufacturer":"Owens Corning","profile":"Duration","color":"Driftwood","size_sq":"17.52","hail_met":"2.5","hail_algo":"2.5","wind":""},{"id":40,"tier":"WARM","score":10,"name":"Homeowner","phone":"","email":"","address":"N Mattox Rd, KCMO, MO 64151","street":"N Mattox Rd","city":"KCMO","state":"MO","zip":"64151","manufacturer":"Boral","profile":"Tile","color":"Chestnut","size_sq":"","hail_met":"3.5","hail_algo":"3.75","wind":""},{"id":41,"tier":"WARM","score":10,"name":"Susan Hamrick","phone":"913-593-3046","email":"suzeqz61@gmail.com","address":"N 63rd St, Kansas City, KS 66104","street":"N 63rd St","city":"Kansas City","state":"KS","zip":"66104","manufacturer":"MPI","profile":"Ag Panel","color":"Classic green","size_sq":"16.39","hail_met":"2.5","hail_algo":"3","wind":""},{"id":42,"tier":"WARM","score":10,"name":"Ernie Watson","phone":"913-705-1916","email":"","address":"Leavenworth Rd, Kansas City, KS 66109","street":"Leavenworth Rd","city":"Kansas City","state":"KS","zip":"66109","manufacturer":"Tamko","profile":"Heritage","color":"Rustic Evergreen","size_sq":"24","hail_met":"3.5","hail_algo":"3","wind":""},{"id":43,"tier":"WARM","score":10,"name":"Homeowner","phone":"","email":"","address":"NW Klamm Dr, KCMO, MO 64151","street":"NW Klamm Dr","city":"KCMO","state":"MO","zip":"64151","manufacturer":"Boral","profile":"Tile","color":"Driftwood","size_sq":"","hail_met":"3.5","hail_algo":"3.5","wind":""},{"id":44,"tier":"WARM","score":10,"name":"Nhia Her","phone":"913-314-9673","email":"nhia_her79@outlook.com","address":"Haskell Dr, Kansas City, KS 66109","street":"Haskell Dr","city":"Kansas City","state":"KS","zip":"66109","manufacturer":"Owens Corning","profile":"Oakridge AR","color":"Driftwood","size_sq":"26","hail_met":"2.5","hail_algo":"3","wind":""},{"id":45,"tier":"WARM","score":10,"name":"Scott Estes","phone":"913-207-7521","email":"bbsestes@gmail.com","address":"Parallel Pkwy, Kansas City, KS 66109","street":"Parallel Pkwy","city":"Kansas City","state":"KS","zip":"66109","manufacturer":"Owens Corning","profile":"Oakridge AR","color":"Peppermill Gray","size_sq":"12.53","hail_met":"2.5","hail_algo":"1.75","wind":""},{"id":46,"tier":"WARM","score":10,"name":"Homeowner","phone":"","email":"","address":"NW Monticello Dr, KCMO, MO 64152","street":"NW Monticello Dr","city":"KCMO","state":"MO","zip":"64152","manufacturer":"Boral","profile":"Shake","color":"Driftwood","size_sq":"","hail_met":"3.5","hail_algo":"3.25","wind":""},{"id":47,"tier":"WARM","score":10,"name":"Homeowner","phone":"","email":"","address":"NW Tiffany Springs Rd, KCMO, MO 64154","street":"NW Tiffany Springs Rd","city":"KCMO","state":"MO","zip":"64154","manufacturer":"Boral","profile":"Shake","color":"Charcoal","size_sq":"","hail_met":"3.5","hail_algo":"2.75","wind":""},{"id":48,"tier":"WARM","score":10,"name":"Homeowner","phone":"","email":"","address":"NW Dawn Ln, KCMO, MO 64151","street":"NW Dawn Ln","city":"KCMO","state":"MO","zip":"64151","manufacturer":"Boral","profile":"Shake","color":"Coronado","size_sq":"","hail_met":"3.5","hail_algo":"3.5","wind":""},{"id":49,"tier":"WARM","score":9,"name":"Randall Pallesen","phone":"913-901-7926","email":"randall@bisonit.com","address":"N 68th St, Kansas City, KS 66109","street":"N 68th St","city":"Kansas City","state":"KS","zip":"66109","manufacturer":"Boral","profile":"Pine Crest Shake","color":"Timberwood","size_sq":"16.16","hail_met":"1.75","hail_algo":"2.75","wind":""},{"id":50,"tier":"WARM","score":9,"name":"Deborah Farachi","phone":"913-788-9693","email":"","address":"N 75th Terrace, Kansas City, KS 66109","street":"N 75th Terrace","city":"Kansas City","state":"KS","zip":"66109","manufacturer":"Guardina","profile":"","color":"Caf","size_sq":"21","hail_met":"2.5","hail_algo":"3","wind":""},{"id":51,"tier":"WARM","score":9,"name":"John & Mary Pierce","phone":"913-205-5476","email":"marypierce228@hughes.net","address":"Stillwell Rd, Bonner Springs, KS 66012","street":"Stillwell Rd","city":"Bonner Springs","state":"KS","zip":"66012","manufacturer":"Boral","profile":"Pine Crest Shake","color":"Timberwood","size_sq":"40","hail_met":"1.75","hail_algo":"","wind":""},{"id":52,"tier":"WARM","score":9,"name":"Larry Ashley","phone":"913-952-9304","email":"glennstephen@hotmail.com","address":"N 94th St, Kansas City, KS 66112","street":"N 94th St","city":"Kansas City","state":"KS","zip":"66112","manufacturer":"Boral","profile":"Tile","color":"Barcelona","size_sq":"20","hail_met":"1.75","hail_algo":"2","wind":""},{"id":53,"tier":"WARM","score":8,"name":"Margo Aldridge","phone":"816-206-0281","email":"Alt Phone: 816-941-0266","address":"Glen Arbor Rd, KCMO, MO 64114","street":"Glen Arbor Rd","city":"KCMO","state":"MO","zip":"64114","manufacturer":"Boral","profile":"Tile","color":"Charcoal","size_sq":"56","hail_met":"1.5","hail_algo":"1.25","wind":""},{"id":54,"tier":"WARM","score":8,"name":"David Batcheller","phone":"816-550-6590","email":"","address":"NW Saddle Club Ct, KCMO, MO 64152","street":"NW Saddle Club Ct","city":"KCMO","state":"MO","zip":"64152","manufacturer":"Boral","profile":"Tile","color":"Terra Cotta","size_sq":"68","hail_met":"","hail_algo":"1.75","wind":""},{"id":55,"tier":"WARM","score":8,"name":"Allagra/Judy Kincaid/Dangerfield","phone":"913-663-0816","email":"allegra.kincaid@midwesttrust.com","address":"N 79 Terrace, Kansas City, KS 66112","street":"N 79 Terrace","city":"Kansas City","state":"KS","zip":"66112","manufacturer":"Owens Corning","profile":"TruDefinition Duration AR","color":"Driftwood","size_sq":"40.01","hail_met":"1.75","hail_algo":"2.5","wind":""},{"id":56,"tier":"WARM","score":8,"name":"Rodney & Tammy Buckallew","phone":"623-451-0500","email":"tbuckallew@hotmail.com","address":"137 St, Bonner Springs, KS 66012","street":"137 St","city":"Bonner Springs","state":"KS","zip":"66012","manufacturer":"Owens Corning","profile":"Duration","color":"Driftwood","size_sq":"25.43","hail_met":"1.75","hail_algo":"","wind":""},{"id":57,"tier":"WARM","score":8,"name":"Mike Malnar","phone":"913-387-9162","email":"malnarremodeling@yahoo.com","address":"Stillwell Rd, Bonner Springs, KS 66012","street":"Stillwell Rd","city":"Bonner Springs","state":"KS","zip":"66012","manufacturer":"Owens Corning","profile":"Duration","color":"Driftwood","size_sq":"48.98","hail_met":"1.75","hail_algo":"1.25","wind":""},{"id":58,"tier":"WARM","score":8,"name":"Mitchell & Linda Mellott","phone":"913-441-6984","email":"","address":"W Insley Ave, Bonner Springs, KS 66012","street":"W Insley Ave","city":"Bonner Springs","state":"KS","zip":"66012","manufacturer":"Gerard","profile":"Capistrano Tile","color":"Barcelona","size_sq":"30","hail_met":"1.75","hail_algo":"1.25","wind":""},{"id":59,"tier":"WARM","score":8,"name":"Allegra (Carmona) Kincaid","phone":"913-663-0816","email":"allegra.kincaid@midwesttrust.com","address":"Everett Ave, Kansas City, KS 66112","street":"Everett Ave","city":"Kansas City","state":"KS","zip":"66112","manufacturer":"Certainteed","profile":"Presidential Shake","color":"Aged Black","size_sq":"24","hail_met":"1.75","hail_algo":"2.5","wind":""},{"id":60,"tier":"WARM","score":8,"name":"Michele Foulks","phone":"913-220-3693","email":"michelefoulks@yahoo.com","address":"N 79 St, Kansas City, KS 66112","street":"N 79 St","city":"Kansas City","state":"KS","zip":"66112","manufacturer":"Owens Corning","profile":"TruDefinition Duration Designer","color":"Black Sable","size_sq":"33","hail_met":"1.75","hail_algo":"2.5","wind":""},{"id":61,"tier":"WARM","score":8,"name":"Mark Betsch","phone":"913-851-0930","email":"nqbn2profit@gmail.com","address":"W Harmony Ln, Olathe, KS 66062","street":"W Harmony Ln","city":"Olathe","state":"KS","zip":"66062","manufacturer":"Boral","profile":"Tile","color":"Charcoal","size_sq":"53","hail_met":"1.5","hail_algo":"1.5","wind":""},{"id":62,"tier":"WARM","score":8,"name":"Brandon & Gena Shively","phone":"816-405-0503","email":"brandonshively45@gmail.com","address":"NW 64th Terrace, KCMO, MO 64118","street":"NW 64th Terrace","city":"KCMO","state":"MO","zip":"64118","manufacturer":"Owens Corning","profile":"Oakridge","color":"Onyx Black","size_sq":"19","hail_met":"1.75","hail_algo":"1.75","wind":""},{"id":63,"tier":"WARM","score":7,"name":"Homeowner","phone":"","email":"","address":"W Insley Ave, Bonner Springs, KS 66012","street":"W Insley Ave","city":"Bonner Springs","state":"KS","zip":"66012","manufacturer":"Boral","profile":"Tile","color":"Barcelona","size_sq":"","hail_met":"1.75","hail_algo":"1.25","wind":""},{"id":64,"tier":"WARM","score":7,"name":"Brenda Potter","phone":"913-422-4616","email":"","address":"Castle Dr, Bonner Springs, KS 66012","street":"Castle Dr","city":"Bonner Springs","state":"KS","zip":"66012","manufacturer":"Ag Panel","profile":"26 GS Strongseam AG Panel","color":"","size_sq":"22","hail_met":"1.75","hail_algo":"1","wind":""},{"id":65,"tier":"WARM","score":7,"name":"Donald Luttrell","phone":"913-422-4608","email":"","address":"Armour Ave, Bonner Springs, KS 66012","street":"Armour Ave","city":"Bonner Springs","state":"KS","zip":"66012","manufacturer":"","profile":"Timberline","color":"Weathered Wood","size_sq":"","hail_met":"1.75","hail_algo":"1.25","wind":""},{"id":66,"tier":"WARM","score":7,"name":"Edward Millberger","phone":"913-299-6433","email":"","address":"Washington Ave, Kansas City, KS 66112","street":"Washington Ave","city":"Kansas City","state":"KS","zip":"66112","manufacturer":"GAF","profile":"Timberline 30","color":"Shakewood","size_sq":"48","hail_met":"1.75","hail_algo":"2.25","wind":""},{"id":67,"tier":"WARM","score":7,"name":"Anita OHora","phone":"913-231-8211","email":"amohora@yahoo.com","address":"N 32nd St, Kansas City, KS 66104","street":"N 32nd St","city":"Kansas City","state":"KS","zip":"66104","manufacturer":"Owens Corning","profile":"TruDefinition Duration","color":"Driftwood","size_sq":"14.5","hail_met":"","hail_algo":"1.5","wind":""},{"id":68,"tier":"WARM","score":7,"name":"Marian McKnight","phone":"816-942-3989","email":"","address":"E 106 Terrace, KCMO, MO 64114","street":"E 106 Terrace","city":"KCMO","state":"MO","zip":"64114","manufacturer":"Gerard","profile":"Gerard Tile","color":"Cypress","size_sq":"43","hail_met":"1.5","hail_algo":"1.25","wind":""},{"id":69,"tier":"WARM","score":7,"name":"Ron Sellars","phone":"816-765-4734","email":"ronsellarstbird@hotmail.com","address":"Bennington Ave, KCMO, MO 64134","street":"Bennington Ave","city":"KCMO","state":"MO","zip":"64134","manufacturer":"Owens Corning","profile":"Duration Tru-Def","color":"Amber","size_sq":"17","hail_met":"1.5","hail_algo":"1.25","wind":""},{"id":70,"tier":"WARM","score":7,"name":"Jay Noel","phone":"816-210-6593","email":"","address":"Bannister Rd, KCMO, MO 64134","street":"Bannister Rd","city":"KCMO","state":"MO","zip":"64134","manufacturer":"Boral","profile":"Tile","color":"Goldriver","size_sq":"14","hail_met":"1.5","hail_algo":"1.5","wind":""},{"id":71,"tier":"WARM","score":7,"name":"Jacob Huston-Lowery","phone":"816-835-5653","email":"jmhustonlowery@gmail.com","address":"NW 104th St, KCMO, MO 64154","street":"NW 104th St","city":"KCMO","state":"MO","zip":"64154","manufacturer":"Certainteed","profile":"Presidential Shake","color":"Shadow Gray","size_sq":"","hail_met":"1.5","hail_algo":"1.25","wind":""},{"id":72,"tier":"WARM","score":7,"name":"Dr. Robert & Michelle Orr M.D.","phone":"816-891-0717","email":"","address":"N Bradford Ave, KCMO, MO 64154","street":"N Bradford Ave","city":"KCMO","state":"MO","zip":"64154","manufacturer":"Boral","profile":"Shake","color":"Charcoal","size_sq":"60","hail_met":"1.5","hail_algo":"3","wind":""},{"id":73,"tier":"WARM","score":7,"name":"Bart King","phone":"816-812-3582","email":"kingrplic@gmail.com","address":"NW 104th Terrace, KCMO, MO 64154","street":"NW 104th Terrace","city":"KCMO","state":"MO","zip":"64154","manufacturer":"Unified Steel","profile":"Pine Crest Shake","color":"Timberwood","size_sq":"50","hail_met":"1.5","hail_algo":"1","wind":""},{"id":74,"tier":"WARM","score":7,"name":"Dave Goodman","phone":"913-226-8011","email":"","address":"W 155th Terrace, Olathe, KS 66062","street":"W 155th Terrace","city":"Olathe","state":"KS","zip":"66062","manufacturer":"Boral","profile":"Shake","color":"Driftwood","size_sq":"14","hail_met":"1.5","hail_algo":"1.5","wind":""},{"id":75,"tier":"WARM","score":7,"name":"Larry Deuschle","phone":"913-782-5468","email":"","address":"S Shannan Ln, Olathe, KS 66062","street":"S Shannan Ln","city":"Olathe","state":"KS","zip":"66062","manufacturer":"Boral","profile":"Tile","color":"Chestnut","size_sq":"61.5","hail_met":"1.5","hail_algo":"1.5","wind":""},{"id":76,"tier":"WARM","score":7,"name":"Steve & Cammy Schrobilgen","phone":"913-685-4988","email":"","address":"W 148th St, Overland Park, KS 66221","street":"W 148th St","city":"Overland Park","state":"KS","zip":"66221","manufacturer":"Boral","profile":"Canyon Shake","color":"Windsor","size_sq":"52","hail_met":"1.5","hail_algo":"1.5","wind":""}];
 
-fileInput.addEventListener('change', e => {
-  if (e.target.files[0]) setFile(e.target.files[0]);
-});
-
-uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
-uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
-uploadZone.addEventListener('drop', e => {
-  e.preventDefault();
-  uploadZone.classList.remove('drag-over');
-  if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]);
-});
-
-function setFile(file) {
-  if (!file.name.endsWith('.pdf')) {
-    showError('Please upload a PDF file.');
-    return;
-  }
-  selectedFile = file;
-  document.getElementById('fileName').textContent = file.name;
-  document.getElementById('fileSelected').classList.add('show');
-  document.getElementById('parseBtn').disabled = false;
-  hideError();
+// ═══════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════
+let currentTab = 'HOT';
+let leadStates = {}; // { leadId: { status, notes, updatedAt, updatedBy } }
+let selectedIds = new Set();
+let isSelectMode = false;
+let openNotesId = null;
+let supabaseConnected = false;
+let repName = localStorage.getItem('rf_rep_name') || '';
+if (!repName) {
+  repName = prompt('Enter your name (shown with updates):') || 'Rep';
+  localStorage.setItem('rf_rep_name', repName);
 }
 
-// ── PARSE CLAIM ──
-async function parseClaim() {
-  if (!selectedFile) return;
+// ═══════════════════════════════════════════════
+// SUPABASE HELPERS
+// ═══════════════════════════════════════════════
+async function sbFetch(path, opts = {}) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    ...opts,
+    headers: {
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=minimal',
+      ...(opts.headers || {})
+    }
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(err);
+  }
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
+}
 
-  // Reset UI
-  hideError();
-  document.getElementById('parseBtn').disabled = true;
-  document.getElementById('spinnerWrap').classList.add('show');
-  document.getElementById('summarySection').style.display = 'none';
-  document.getElementById('oopBox').classList.remove('show');
-  document.getElementById('genBtn').classList.remove('show');
+async function loadLeadStates() {
+  try {
+    // Get latest update per lead_id
+    const rows = await sbFetch(`${TABLE_UPDATES}?select=lead_id,status,notes,updated_at,rep_name&order=updated_at.desc`);
+    const seen = new Set();
+    for (const r of rows) {
+      if (!seen.has(r.lead_id)) {
+        leadStates[r.lead_id] = { status: r.status, notes: r.notes, updatedAt: r.updated_at, repName: r.rep_name };
+        seen.add(r.lead_id);
+      }
+    }
+    supabaseConnected = true;
+    document.getElementById('sync-dot').className = 'sync-dot';
+  } catch(e) {
+    console.warn('Supabase load failed, using local state', e);
+    // Load from localStorage as fallback
+    const local = localStorage.getItem('rf_lead_states');
+    if (local) leadStates = JSON.parse(local);
+  }
+}
 
-  document.getElementById('lineItemsArea').style.display = 'none';
-  document.getElementById('emptyState').style.display = 'flex';
+async function saveUpdate(leadId, status, notes) {
+  const payload = {
+    lead_id: leadId,
+    status,
+    notes: notes || '',
+    rep_name: repName,
+    updated_at: new Date().toISOString()
+  };
+  // Always save to localStorage immediately
+  leadStates[leadId] = { status, notes, updatedAt: payload.updated_at, repName: repName };
+  localStorage.setItem('rf_lead_states', JSON.stringify(leadStates));
 
   try {
-    // Read PDF as base64
-    const pdfBase64 = await fileToBase64(selectedFile);
-
-    const response = await fetch('/api/parse-claim', {
+    await sbFetch(TABLE_UPDATES, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pdfBase64, filename: selectedFile.name })
+      body: JSON.stringify(payload)
     });
-
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({ error: 'Server error' }));
-      throw new Error(err.error || `HTTP ${response.status}`);
-    }
-
-    parsedData = await response.json();
-    renderResults(parsedData);
-
-  } catch (err) {
-    showError('Error: ' + err.message);
-  } finally {
-    document.getElementById('parseBtn').disabled = false;
-    document.getElementById('spinnerWrap').classList.remove('show');
+    showToast('✓ Saved', 'success');
+  } catch(e) {
+    showToast('Saved locally (offline)', '');
+    console.warn('Supabase save failed', e);
   }
+  updateStats();
+  renderList();
 }
 
-function fileToBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result.split(',')[1]);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
-// ── RENDER RESULTS ──
-function renderResults(data) {
-  // Auto-fill claim info fields
-  autoFill('customerName', data.customerName);
-  autoFill('customerAddress', data.customerAddress);
-  autoFill('claimNumber', data.claimNumber);
-  autoFillNumber('deductible', data.summaryDeductible);
-
-  // Summary cards
-  document.getElementById('sumRCV').textContent = fmt(data.summaryRCV);
-  document.getElementById('sumACV').textContent = fmt(data.summaryACV);
-  document.getElementById('sumNonRec').textContent = fmt(data.summaryNonRecDep);
-  document.getElementById('sumRec').textContent = fmt(data.summaryRecDep);
-  document.getElementById('sumNet').textContent = fmt(data.summaryNetClaim);
-  document.getElementById('sumRecovered').textContent = fmt(data.summaryNetIfRecovered);
-  if (data.summaryPriorPayments > 0) {
-    document.getElementById('sumPrior').textContent = fmt(data.summaryPriorPayments);
-    document.getElementById('priorPayCard').style.display = 'block';
-  }
-  document.getElementById('summarySection').style.display = 'block';
-
-  // Line items
-  renderLineItems(data.lineItems);
-
-  // Show extras
-  document.getElementById('emptyState').style.display = 'none';
-  document.getElementById('lineItemsArea').style.display = 'block';
-  document.getElementById('oopBox').classList.add('show');
-  document.getElementById('genBtn').classList.add('show');
-
-
-  recalcOOP();
-}
-
-function autoFill(id, value) {
-  const el = document.getElementById(id);
-  if (value && value.trim()) {
-    el.value = value.trim();
-    el.classList.add('auto-filled');
-  }
-}
-
-function autoFillNumber(id, value) {
-  const el = document.getElementById(id);
-  if (value && value > 0) {
-    el.value = value;
-    el.classList.add('auto-filled');
-  }
-}
-
-function renderLineItems(items) {
-  const area = document.getElementById('lineItemsArea');
-
-  // Policy badge
-  const policyType = parsedData.policyType || 'UNKNOWN';
-  const dotClass = policyType === 'RCV' ? 'rcv' : policyType === 'ACV' ? 'acv' : 'mixed';
-  let html = `<div class="policy-badge">
-    <div class="badge-dot ${dotClass}"></div>
-    <span>${parsedData.carrier || 'Unknown Carrier'}</span>
-    <span style="color:#555">|</span>
-    <span>${policyType} Policy</span>
-    ${parsedData.hasOP ? '<span style="color:#555">|</span><span style="color:#ffa726">O&P Included</span>' : ''}
-  </div>`;
-
-  // Group by section
-  const sections = {};
-  items.forEach(item => {
-    const sec = item.section || 'Other';
-    if (!sections[sec]) sections[sec] = [];
-    sections[sec].push(item);
-  });
-
-  html += `<table class="items-table">
-    <thead>
-      <tr>
-        <th style="width:36px">Decline</th>
-        <th>#</th>
-        <th>Description</th>
-        <th>Qty</th>
-        <th class="num">RCV</th>
-        <th class="num">Rec Dep</th>
-        <th class="num">Non-Rec Dep</th>
-        <th class="num">ACV</th>
-      </tr>
-    </thead>
-    <tbody id="itemsTbody">`;
-
-  Object.entries(sections).forEach(([section, sectionItems]) => {
-    html += `</tbody><tbody>
-      <tr><td colspan="8" style="padding:0">
-        <div class="section-header">${section}</div>
-      </td></tr>
-    </tbody><tbody id="itemsTbody">`;
-
-    sectionItems.forEach(item => {
-      if (item.paidWhenIncurred) {
-        html += `<tr id="row-${item.lineNumber}" style="background:#0d1f0d">
-          <td class="no-strike" style="text-align:center;color:#555" title="PWI items cannot be declined">—</td>
-          <td style="color:#666;font-size:11px">${item.lineNumber}</td>
-          <td class="desc">
-            <div style="color:#4caf50;font-weight:600">${item.description}</div>
-            <div style="margin-top:5px;display:flex;align-items:center;gap:6px">
-              <input type="checkbox" class="pwi-cb" data-line="${item.lineNumber}" onchange="recalcOOP()" style="accent-color:#4caf50;width:14px;height:14px;cursor:pointer">
-              <span style="font-size:10px;color:#4caf50;font-weight:700;letter-spacing:0.3px">PAID WHEN INCURRED — check if RF will perform</span>
-            </div>
-          </td>
-          <td class="qty">${item.quantity}</td>
-          <td class="num" style="color:#4caf50">$${fmtNum(item.rcv)}</td>
-          <td class="num">—</td>
-          <td class="num">—</td>
-          <td class="num" style="color:#4caf50">$${fmtNum(item.acv)}</td>
-        </tr>`;
-      } else {
-        html += `<tr id="row-${item.lineNumber}">
-          <td class="no-strike" style="text-align:center">
-            <input type="checkbox" class="decline-cb" onchange="toggleDecline(${item.lineNumber}, this.checked)" title="Mark as declined">
-          </td>
-          <td style="color:#666;font-size:11px">${item.lineNumber}</td>
-          <td class="desc">${item.description}</td>
-          <td class="qty">${item.quantity}</td>
-          <td class="num">$${fmtNum(item.rcv)}</td>
-          <td class="num dep-rec">${item.recoverableDep > 0 ? '$' + fmtNum(item.recoverableDep) : '—'}</td>
-          <td class="num dep-nonrec">${item.nonRecoverableDep > 0 ? '$' + fmtNum(item.nonRecoverableDep) : '—'}</td>
-          <td class="num">$${fmtNum(item.acv)}</td>
-        </tr>`;
+// Poll for updates every 15s
+setInterval(async () => {
+  if (!supabaseConnected) return;
+  try {
+    const rows = await sbFetch(`${TABLE_UPDATES}?select=lead_id,status,notes,updated_at,rep_name&order=updated_at.desc&limit=200`);
+    const seen = new Set();
+    for (const r of rows) {
+      if (!seen.has(r.lead_id)) {
+        leadStates[r.lead_id] = { status: r.status, notes: r.notes, updatedAt: r.updated_at, repName: r.rep_name };
+        seen.add(r.lead_id);
       }
-    });
-  });
+    }
+    updateStats();
+    renderList();
+  } catch(e) {}
+}, 15000);
 
-  html += `</tbody></table>`;
-  area.innerHTML = html;
+// ═══════════════════════════════════════════════
+// UI
+// ═══════════════════════════════════════════════
+function setTab(tab) {
+  currentTab = tab;
+  document.getElementById('tab-hot').className = 'tab' + (tab === 'HOT' ? ' active-hot' : '');
+  document.getElementById('tab-warm').className = 'tab' + (tab === 'WARM' ? ' active-warm' : '');
+  selectedIds.clear();
+  renderList();
+  updateStats();
 }
 
-// ── TOGGLE DECLINE ──
-function toggleDecline(lineNumber, isDeclined) {
-  const row = document.getElementById('row-' + lineNumber);
-  if (isDeclined) {
-    row.classList.add('declined');
+function filteredLeads() {
+  const q = document.getElementById('search').value.toLowerCase();
+  return SEED_LEADS.filter(l => {
+    if (l.tier !== currentTab) return false;
+    if (!q) return true;
+    return l.name.toLowerCase().includes(q) ||
+           l.address.toLowerCase().includes(q) ||
+           l.zip.includes(q) ||
+           (l.manufacturer || '').toLowerCase().includes(q);
+  });
+}
+
+function updateStats() {
+  const all = SEED_LEADS.filter(l => l.tier === currentTab);
+  const spoke = all.filter(l => leadStates[l.id]?.status === 'spoke').length;
+  const insp = all.filter(l => leadStates[l.id]?.status === 'inspection').length;
+  const done = all.filter(l => ['spoke','inspection','not-interested'].includes(leadStates[l.id]?.status)).length;
+  document.getElementById('stat-spoke').textContent = spoke;
+  document.getElementById('stat-insp').textContent = insp;
+  document.getElementById('stat-remain').textContent = all.length - done;
+
+  // Update tab badges
+  const hotCount = SEED_LEADS.filter(l => l.tier === 'HOT' && !['not-interested'].includes(leadStates[l.id]?.status)).length;
+  const warmCount = SEED_LEADS.filter(l => l.tier === 'WARM' && !['not-interested'].includes(leadStates[l.id]?.status)).length;
+  document.getElementById('hot-badge').textContent = hotCount;
+  document.getElementById('warm-badge').textContent = warmCount;
+}
+
+function renderList() {
+  const leads = filteredLeads();
+  const listEl = document.getElementById('list');
+  if (!leads.length) {
+    listEl.innerHTML = '<div class="empty"><div class="icon">🔍</div><p>No leads match your search.</p></div>';
+    return;
+  }
+
+  listEl.innerHTML = leads.map(l => {
+    const state = leadStates[l.id] || {};
+    const status = state.status || '';
+    const notes = state.notes || '';
+    const ts = state.updatedAt ? new Date(state.updatedAt).toLocaleString('en-US', {month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}) : '';
+    const repTag = state.repName ? ` · ${state.repName}` : '';
+    const hailNum = parseFloat(l.hail_met || l.hail_algo) || 0;
+    const hailClass = hailNum >= 3 ? 'big' : 'med';
+    const hailStr = l.hail_met ? `${l.hail_met}"` : (l.hail_algo ? `~${l.hail_algo}"` : '');
+    const isSelected = selectedIds.has(l.id);
+    const notesOpen = openNotesId === l.id;
+
+    const statusLabels = [
+      { s: 'no-answer', label: '📵 No Answer' },
+      { s: 'not-home', label: '🏃 Not Home' },
+      { s: 'spoke', label: '✅ Spoke To' },
+      { s: 'inspection', label: '🏆 Inspection Set' },
+      { s: 'not-interested', label: '❌ Not Interested' },
+    ];
+
+    const mfgTag = l.manufacturer ? `<span class="meta-tag">${l.manufacturer}</span>` : '';
+    const profileTag = l.profile ? `<span class="meta-tag">${l.profile}</span>` : '';
+    const sizeTag = l.size_sq ? `<span class="meta-tag">${l.size_sq} sq</span>` : '';
+    const zipTag = `<span class="meta-tag">ZIP ${l.zip}</span>`;
+
+    const statusClass = status ? `status-${status}` : '';
+
+    return `
+    <div class="lead-card ${l.tier.toLowerCase()} ${statusClass} ${isSelected ? 'selected' : ''}"
+         id="card-${l.id}"
+         oncontextmenu="holdCard(event,${l.id})"
+         ontouchstart="startHold(${l.id})" ontouchend="cancelHold()" ontouchmove="cancelHold()">
+      <div class="card-inner">
+        <div class="select-overlay"></div>
+        ${isSelectMode ? `<div class="select-check" onclick="toggleSelect(event,${l.id})">${isSelected ? '✓' : ''}</div>` : ''}
+        <div class="card-header" onclick="${isSelectMode ? `toggleSelect(event,${l.id})` : ''}">
+          <div>
+            <div class="card-name">${l.name}</div>
+            <div class="card-address">${l.address}</div>
+            ${ts ? `<div style="font-size:10px;color:var(--muted);margin-top:3px">${ts}${repTag}</div>` : ''}
+          </div>
+          <div class="card-right">
+            <div class="hail-badge ${hailClass}">${hailStr}</div>
+            <div class="tier-label ${l.tier.toLowerCase()}">${l.tier}</div>
+          </div>
+        </div>
+        <div class="card-meta">${mfgTag}${profileTag}${sizeTag}${zipTag}</div>
+        ${!isSelectMode ? `
+        <div class="action-row">
+          ${l.phone ? `<button class="action-btn call" onclick="callLead('${l.phone}')">📞 ${l.phone}</button>` : '<button class="action-btn" style="opacity:.4" disabled>📞 No phone</button>'}
+          <button class="action-btn map" onclick="openMap('${encodeURIComponent(l.address)}')">📍 Map</button>
+          <button class="action-btn notes ${notesOpen ? 'open-notes' : ''}" onclick="toggleNotes(${l.id})">📝 Notes</button>
+        </div>
+        <div class="status-row">
+          ${statusLabels.map(({s, label}) =>
+            `<button class="status-btn ${status === s ? 'active' : ''}" data-s="${s}" onclick="setStatus(${l.id},'${s}')">${label}</button>`
+          ).join('')}
+        </div>
+        <div class="notes-row ${notesOpen ? 'open' : ''}" id="notes-${l.id}">
+          <textarea class="notes-input" id="notes-input-${l.id}" placeholder="Notes, objections, best time to call…">${notes}</textarea>
+          <div class="notes-save-row">
+            <span class="ts">${ts ? `Last: ${ts}` : 'No updates yet'}</span>
+            <button class="save-btn" onclick="saveNotes(${l.id})">Save Notes</button>
+          </div>
+        </div>
+        ` : ''}
+      </div>
+    </div>`;
+  }).join('');
+
+  // Route FAB
+  const fab = document.getElementById('route-fab');
+  const fabCount = document.getElementById('fab-count');
+  if (isSelectMode) {
+    fab.style.display = 'flex';
+    fabCount.textContent = selectedIds.size;
+    document.getElementById('select-count-text').textContent = `${selectedIds.size} selected`;
   } else {
-    row.classList.remove('declined');
+    fab.style.display = 'none';
   }
-  recalcOOP();
 }
 
-// ── FINANCIAL CALCULATIONS ──
-// First check  = ACV of ALL items (excl PWI) - deductible
-// Second check = Rec dep on contracted items + RCV of PWI items performed
-// OOP          = Deductible + non-rec dep on contracted items - ACV of declined items
+// ═══════════════════════════════════════════════
+// ACTIONS
+// ═══════════════════════════════════════════════
+function setStatus(leadId, status) {
+  const current = leadStates[leadId]?.status;
+  const newStatus = current === status ? '' : status; // toggle off
+  const notes = leadStates[leadId]?.notes || '';
+  saveUpdate(leadId, newStatus, notes);
+}
 
-function recalcOOP() {
-  if (!parsedData) return;
+function toggleNotes(leadId) {
+  openNotesId = openNotesId === leadId ? null : leadId;
+  renderList();
+  if (openNotesId) {
+    setTimeout(() => {
+      const el = document.getElementById(`notes-input-${leadId}`);
+      if (el) el.focus();
+    }, 100);
+  }
+}
 
-  const deductible = parseFloat(document.getElementById('deductible').value) || 0;
+function saveNotes(leadId) {
+  const el = document.getElementById(`notes-input-${leadId}`);
+  const notes = el ? el.value : '';
+  const status = leadStates[leadId]?.status || '';
+  saveUpdate(leadId, status, notes);
+  openNotesId = null;
+}
 
-  // Get declined line numbers
-  const declinedRows = document.querySelectorAll('tr.declined');
-  const declinedNums = new Set();
-  declinedRows.forEach(row => {
-    declinedNums.add(parseInt(row.id.replace('row-', '')));
-  });
+function callLead(phone) {
+  const clean = phone.replace(/[^0-9+]/g, '');
+  window.location.href = `tel:${clean}`;
+}
 
-  // Get PWI items being performed
-  const pwiPerformed = new Set();
-  document.querySelectorAll('.pwi-cb:checked').forEach(cb => {
-    pwiPerformed.add(parseInt(cb.dataset.line));
-  });
+function openMap(addr) {
+  window.open(`https://maps.google.com/?q=${addr}`, '_blank');
+}
 
-  let allScopeACV = 0;       // All items excl PWI (for 1st check)
-  let recDepContracted = 0;  // Rec dep on contracted non-PWI items (for 2nd check)
-  let pwiRCV = 0;            // RCV of PWI items performed (for 2nd check)
-  let nonRecDepContracted = 0; // Non-rec dep on contracted items (for OOP)
-  let declinedACV = 0;       // ACV of declined items (reduces OOP)
+// ── SELECT / ROUTE MODE ──
+let holdTimer = null;
+function startHold(leadId) {
+  holdTimer = setTimeout(() => {
+    if (!isSelectMode) enterSelectMode();
+    toggleSelect(null, leadId);
+  }, 500);
+}
+function cancelHold() { clearTimeout(holdTimer); }
 
-  parsedData.lineItems.forEach(item => {
-    if (item.paidWhenIncurred) {
-      // PWI items — only count RCV toward 2nd check if being performed
-      if (pwiPerformed.has(item.lineNumber)) {
-        pwiRCV += item.rcv || 0;
-      }
-      return; // PWI items excluded from 1st check and OOP
+function holdCard(e, leadId) {
+  e.preventDefault();
+  if (!isSelectMode) enterSelectMode();
+  toggleSelect(null, leadId);
+}
+
+function enterSelectMode() {
+  isSelectMode = true;
+  document.getElementById('list').classList.add('route-mode');
+  document.getElementById('select-banner').classList.add('visible');
+  renderList();
+}
+
+function exitSelectMode() {
+  isSelectMode = false;
+  selectedIds.clear();
+  document.getElementById('list').classList.remove('route-mode');
+  document.getElementById('select-banner').classList.remove('visible');
+  document.getElementById('route-fab').style.display = 'none';
+  renderList();
+}
+
+function toggleSelectMode() {
+  if (isSelectMode && selectedIds.size > 0) {
+    openGoogleMapsRoute();
+  } else {
+    exitSelectMode();
+  }
+}
+
+function toggleSelect(e, leadId) {
+  if (e) e.stopPropagation();
+  if (selectedIds.has(leadId)) {
+    selectedIds.delete(leadId);
+  } else {
+    if (selectedIds.size >= 10) {
+      showToast('Max 10 stops in Google Maps route', 'error');
+      return;
     }
-
-    // All non-PWI items contribute to 1st check regardless of declined status
-    allScopeACV += item.acv || 0;
-
-    if (declinedNums.has(item.lineNumber)) {
-      // Declined — ACV reduces OOP
-      declinedACV += item.acv || 0;
-    } else {
-      // Contracted — non-rec dep adds to OOP, rec dep adds to 2nd check
-      nonRecDepContracted += item.nonRecoverableDep || 0;
-      recDepContracted += item.recoverableDep || 0;
-    }
-  });
-
-  const firstCheck = Math.max(0, allScopeACV - deductible);
-  const secondCheck = recDepContracted + pwiRCV;
-  const oop = Math.max(0, deductible + nonRecDepContracted - declinedACV);
-
-  document.getElementById('firstCheck').textContent = '$' + fmtNum(firstCheck);
-  document.getElementById('secondCheck').textContent = '$' + fmtNum(secondCheck);
-  document.getElementById('oopValue').textContent = '$' + fmtNum(oop);
+    selectedIds.add(leadId);
+  }
+  renderList();
 }
 
-// ── GENERATE PDF ──
-async function generatePDF() {
-  if (!parsedData) return;
-
-  const customerName = document.getElementById('customerName').value || 'Customer';
-  const customerAddress = document.getElementById('customerAddress').value || '';
-  const claimNumber = document.getElementById('claimNumber').value || '';
-  const deductible = parseFloat(document.getElementById('deductible').value) || 0;
-
-  // Get declined line numbers
-  const declinedRows = document.querySelectorAll('#itemsTbody tr.declined');
-  const declinedNums = new Set();
-  declinedRows.forEach(row => {
-    const id = row.id.replace('row-', '');
-    declinedNums.add(parseInt(id));
-  });
-
-  const acceptedItems = parsedData.lineItems.filter(i => !declinedNums.has(i.lineNumber));
-  const declinedItems = parsedData.lineItems.filter(i => declinedNums.has(i.lineNumber));
-
-  // Calculate financials
-  let nonRecDepContracted = 0;
-  let recDepContracted = 0;
-  let rcvContracted = 0;
-  let acvContracted = 0;
-  acceptedItems.forEach(i => {
-    nonRecDepContracted += i.nonRecoverableDep || 0;
-    recDepContracted += i.recoverableDep || 0;
-    rcvContracted += i.rcv || 0;
-    acvContracted += i.acv || 0;
-  });
-
-  let declinedACV = 0;
-  declinedItems.forEach(i => { declinedACV += i.acv || 0; });
-  const oop = Math.max(0, deductible + nonRecDepContracted - declinedACV);
-  // 1st check = summaryACV - deductible (simple, always correct)
-  const firstCheckACV = parsedData.summaryACV || 0;
-  const paidByInsurance = Math.max(0, firstCheckACV - deductible);
-
-  // Build PDF HTML
-  // Get PWI items being performed
-  const pwiPerformedPDF = new Set();
-  document.querySelectorAll('.pwi-cb:checked').forEach(cb => {
-    pwiPerformedPDF.add(parseInt(cb.dataset.line));
-  });
-  let pwiRCVforPDF = 0;
-  let pwiACVforPDF = 0;
-  parsedData.lineItems.forEach(item => {
-    if (item.paidWhenIncurred) {
-      pwiACVforPDF += item.acv || 0;
-      if (pwiPerformedPDF.has(item.lineNumber)) {
-        pwiRCVforPDF += item.rcv || 0;
-      }
-    }
-  });
-
-  const pdfHTML = buildPDFHTML({
-    customerName, customerAddress, claimNumber,
-    carrier: parsedData.carrier || '',
-    policyType: parsedData.policyType || '',
-    deductible, oop,
-    rcvContracted, acvContracted, recDepContracted, nonRecDepContracted,
-    paidByInsurance, firstCheckACV,
-    pwiRCV: pwiRCVforPDF, pwiACV: pwiACVforPDF,
-    summaryNetIfRecovered: parsedData.summaryNetIfRecovered || 0,
-    acceptedItems, declinedItems
-  });
-
-  const win = window.open('', '_blank');
-  win.document.write(pdfHTML);
-  win.document.close();
+function openGoogleMapsRoute() {
+  if (selectedIds.size === 0) {
+    showToast('Select at least 1 lead', 'error');
+    return;
+  }
+  const ids = Array.from(selectedIds);
+  const leads = SEED_LEADS.filter(l => ids.includes(l.id));
+  
+  if (leads.length === 1) {
+    window.open(`https://maps.google.com/?q=${encodeURIComponent(leads[0].address)}`, '_blank');
+    return;
+  }
+  
+  // Google Maps directions with waypoints
+  const encoded = leads.map(l => encodeURIComponent(l.address));
+  const dest = encoded.pop();
+  const origin = encoded.shift() || dest;
+  const waypoints = encoded.join('|');
+  let url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${dest}&travelmode=driving`;
+  if (waypoints) url += `&waypoints=${waypoints}`;
+  window.open(url, '_blank');
+  exitSelectMode();
 }
 
-function buildPDFHTML(d) {
-  const today = new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
-
-  const groupBySection = items => {
-    const s = {};
-    items.forEach(i => { const k = i.section || 'Other'; if (!s[k]) s[k] = []; s[k].push(i); });
-    return s;
-  };
-
-  const itemRowsHTML = (items) => items.map(i => `
-    <tr>
-      <td>${i.description}</td>
-      <td style="text-align:center">${i.quantity}</td>
-      <td style="text-align:right">$${fmtNum(i.rcv)}</td>
-      <td style="text-align:right">${i.recoverableDep > 0 ? '$'+fmtNum(i.recoverableDep) : '—'}</td>
-      <td style="text-align:right">${i.nonRecoverableDep > 0 ? '$'+fmtNum(i.nonRecoverableDep) : '—'}</td>
-      <td style="text-align:right">$${fmtNum(i.acv)}</td>
-    </tr>`).join('');
-
-  const acceptedSections = groupBySection(d.acceptedItems);
-  const declinedSections = groupBySection(d.declinedItems);
-
-  let acceptedHTML = '';
-  Object.entries(acceptedSections).forEach(([sec, items]) => {
-    acceptedHTML += `<tr><td colspan="6" style="background:#f0f0f0;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;padding:6px 8px;color:#333">${sec}</td></tr>`;
-    acceptedHTML += itemRowsHTML(items);
-  });
-
-  let declinedHTML = '';
-  Object.entries(declinedSections).forEach(([sec, items]) => {
-    declinedHTML += `<tr><td colspan="6" style="background:#f0f0f0;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;padding:6px 8px;color:#333">${sec}</td></tr>`;
-    declinedHTML += itemRowsHTML(items);
-  });
-
-  return `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>RF Claim Report - ${d.customerName}</title>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: Arial, sans-serif; font-size: 13px; color: #222; }
-  .page { max-width: 800px; margin: 0 auto; padding: 32px; }
-  .rf-header { background: #CC1414; color: white; padding: 18px 24px; margin-bottom: 24px; border-radius: 4px; display: flex; justify-content: space-between; align-items: flex-end; }
-  .rf-header .brand { font-size: 22px; font-weight: 900; }
-  .rf-header .sub { font-size: 11px; opacity: 0.8; margin-top: 2px; }
-  .rf-header .date { font-size: 12px; opacity: 0.9; text-align: right; }
-  .customer-block { background: #f9f9f9; border: 1px solid #ddd; border-radius: 4px; padding: 14px 18px; margin-bottom: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .cb-item .lbl { font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
-  .cb-item .val { font-size: 14px; font-weight: 700; margin-top: 2px; }
-  .financials { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 24px; }
-  .fin-card { border: 2px solid #ddd; border-radius: 8px; padding: 16px; text-align: center; }
-  .fin-card.insurance { border-color: #2a6e2a; background: #f0fff0; }
-  .fin-card.customer { border-color: #8a2a2a; background: #fff0f0; }
-  .fin-card .fc-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #666; margin-bottom: 8px; }
-  .fin-card .fc-value { font-size: 28px; font-weight: 900; }
-  .fin-card.insurance .fc-value { color: #2a6e2a; }
-  .fin-card.customer .fc-value { color: #8a2a2a; }
-  .fin-card .fc-note { font-size: 11px; color: #888; margin-top: 6px; }
-  .timeline { background: #f9f9f9; border: 1px solid #ddd; border-radius: 4px; padding: 14px 18px; margin-bottom: 24px; }
-  .tl-title { font-weight: 700; margin-bottom: 10px; font-size: 13px; }
-  .tl-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #eee; font-size: 12px; }
-  .tl-row:last-child { border-bottom: none; font-weight: 700; }
-  .supplement-notice { background: #fff8e1; border: 1px solid #f0c040; border-radius: 4px; padding: 12px 16px; margin-bottom: 24px; font-size: 11px; color: #665500; line-height: 1.6; }
-  .section-title { font-size: 16px; font-weight: 700; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 2px solid #CC1414; }
-  table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 24px; }
-  th { background: #333; color: white; padding: 7px 8px; text-align: left; font-size: 11px; }
-  th:not(:first-child) { text-align: right; }
-  td { padding: 6px 8px; border-bottom: 1px solid #eee; vertical-align: top; }
-  .declined-note { background: #fff0f0; border: 1px solid #ffcccc; border-radius: 4px; padding: 10px 14px; margin-bottom: 16px; font-size: 12px; color: #660000; line-height: 1.6; }
-  .sig-section { margin-top: 32px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
-  .sig-line { border-top: 1px solid #333; padding-top: 6px; font-size: 11px; color: #666; margin-top: 40px; }
-  @media print { body { print-color-adjust: exact; -webkit-print-color-adjust: exact; } }
-</style>
-<script>window.onload = () => window.print();<\/script>
-</head>
-<body>
-<div class="page">
-
-  <!-- PAGE 1: FINANCIAL SUMMARY -->
-  <div class="rf-header">
-    <div><div class="brand">ROOFING FORCE</div><div class="sub">Claim Scope Report</div></div>
-    <div class="date">${today}<br>${d.carrier} · ${d.policyType} Policy</div>
-  </div>
-
-  <div class="customer-block">
-    <div class="cb-item"><div class="lbl">Customer</div><div class="val">${d.customerName}</div></div>
-    <div class="cb-item"><div class="lbl">Claim Number</div><div class="val">${d.claimNumber || '—'}</div></div>
-    <div class="cb-item"><div class="lbl">Property Address</div><div class="val">${d.customerAddress}</div></div>
-    <div class="cb-item"><div class="lbl">Deductible</div><div class="val">$${fmtNum(d.deductible)}</div></div>
-  </div>
-
-  <div class="financials">
-    <div class="fin-card insurance">
-      <div class="fc-label">&#x1F4B0; 1st Check</div>
-      <div class="fc-value">$${fmtNum(Math.max(0, d.firstCheckACV - d.deductible))}</div>
-      <div class="fc-note">ACV (excl. PWI) &minus; deductible</div>
-    </div>
-    <div class="fin-card insurance">
-      <div class="fc-label">&#x1F4B0; 2nd Check</div>
-      <div class="fc-value">$${fmtNum(d.recDepContracted + (d.pwiRCV || 0))}</div>
-      <div class="fc-note">Rec dep + PWI performed</div>
-    </div>
-    <div class="fin-card customer">
-      <div class="fc-label">&#x1F3E0; Out of Pocket</div>
-      <div class="fc-value">$${fmtNum(d.oop)}</div>
-      <div class="fc-note">Deductible + non-rec dep</div>
-    </div>
-  </div>
-
-  <div class="timeline">
-    <div class="tl-title">Payment Breakdown</div>
-    <div class="tl-row"><span>Total Replacement Cost Value (RCV)</span><span>$${fmtNum(d.rcvContracted)}</span></div>
-    <div class="tl-row"><span>Less Recoverable Depreciation (held by insurer)</span><span>−$${fmtNum(d.recDepContracted)}</span></div>
-    <div class="tl-row"><span>Less Non-Recoverable Depreciation</span><span>−$${fmtNum(d.nonRecDepContracted)}</span></div>
-    <div class="tl-row"><span>Less Deductible</span><span>−$${fmtNum(d.deductible)}</span></div>
-    <div class="tl-row"><span><strong>Initial Insurance Payment (ACV)</strong></span><span><strong>$${fmtNum(Math.max(0, d.firstCheckACV - d.deductible))}</strong></span></div>
-    ${d.recDepContracted > 0 ? `<div class="tl-row"><span>+ Recoverable Depreciation (paid after completion)</span><span>+$${fmtNum(d.recDepContracted)}</span></div>` : ''}
-  </div>
-
-  <div class="supplement-notice">
-    <strong>Supplement Notice:</strong> Roofing Force reserves the right to review this scope of loss and submit supplemental claims for any items that were missed, undervalued, or identified during the course of repairs. All supplement payments are assigned to Roofing Force.
-  </div>
-  <div class="supplement-notice" style="background:#fff3e0;border-color:#e0a040;color:#5a3a00;margin-top:-16px">
-    <strong>Non-Covered Items</strong> necessary to complete the Project that are outside of the coverage of your insurance policy, including but is not limited to: rotten decking and/or facia, hidden damage, etc., will be your responsibility to pay.
-  </div>
-
-  <div style="page-break-after:always"></div>
-
-  <!-- PAGE 2: ACCEPTED LINE ITEMS -->
-  <div class="rf-header">
-    <div><div class="brand">ROOFING FORCE</div><div class="sub">Accepted Scope of Work</div></div>
-    <div class="date">${d.customerName}<br>Claim: ${d.claimNumber || '—'}</div>
-  </div>
-
-  <div class="section-title">Contracted Items (${d.acceptedItems.length})</div>
-  <table>
-    <thead>
-      <tr>
-        <th>Description</th>
-        <th style="text-align:center">Qty</th>
-        <th>RCV</th>
-        <th>Rec Dep</th>
-        <th>Non-Rec Dep</th>
-        <th>ACV</th>
-      </tr>
-    </thead>
-    <tbody>${acceptedHTML}</tbody>
-  </table>
-
-  <div style="page-break-after:always"></div>
-
-  <!-- PAGE 3: DECLINED ITEMS -->
-  <div class="rf-header">
-    <div><div class="brand">ROOFING FORCE</div><div class="sub">Declined Items</div></div>
-    <div class="date">${d.customerName}<br>Claim: ${d.claimNumber || '—'}</div>
-  </div>
-
-  <div class="section-title">Declined Items (${d.declinedItems.length})</div>
-
-  ${d.declinedItems.length > 0 ? `
-  <div class="declined-note">
-    <strong>Important:</strong> By declining the items listed below, you acknowledge that these repairs will not be completed by Roofing Force under this claim. Declining covered items may affect your future insurance coverage and ability to file related claims. Roofing Force is not responsible for any damage resulting from deferred repairs.
-  </div>
-  <table>
-    <thead>
-      <tr>
-        <th>Description</th>
-        <th style="text-align:center">Qty</th>
-        <th>RCV</th>
-        <th>Rec Dep</th>
-        <th>Non-Rec Dep</th>
-        <th>ACV</th>
-      </tr>
-    </thead>
-    <tbody>${declinedHTML}</tbody>
-  </table>
-  <div class="sig-section">
-    <div><div class="sig-line">Customer Signature</div></div>
-    <div><div class="sig-line">Date</div></div>
-  </div>
-  ` : '<p style="color:#888;font-style:italic">No items were declined.</p>'}
-
-  <div style="margin-top:32px;font-size:10px;color:#aaa;text-align:center;border-top:1px solid #eee;padding-top:12px">
-    Items not covered by insurance that are necessary to complete the project, including but not limited to rotten decking and/or facia, hidden damage, etc., will be your responsibility to pay.
-  </div>
-
-</div>
-</body>
-</html>`;
-}
-
-// ── HELPERS ──
-function fmt(n) { return '$' + fmtNum(n || 0); }
-function fmtNum(n) {
-  return (n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-function showError(msg) {
-  const el = document.getElementById('errorBox');
+// ── TOAST ──
+let toastTimer;
+function showToast(msg, type = '') {
+  const el = document.getElementById('toast');
   el.textContent = msg;
-  el.classList.add('show');
+  el.className = `show ${type}`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = ''; }, 2000);
 }
-function hideError() {
-  document.getElementById('errorBox').classList.remove('show');
+
+// ═══════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════
+async function init() {
+  await loadLeadStates();
+  updateStats();
+  renderList();
+  document.getElementById('loading').style.display = 'none';
 }
+
+init();
 </script>
 </body>
 </html>

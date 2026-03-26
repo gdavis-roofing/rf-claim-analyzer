@@ -23,7 +23,7 @@ export default async function handler(req, res) {
 
     const response = await client.messages.create({
       model: "claude-opus-4-5",
-      max_tokens: 16000,
+      max_tokens: 4000,
       messages: [
         {
           role: "user",
@@ -47,6 +47,7 @@ export default async function handler(req, res) {
 
     const rawText = response.content[0].text;
 
+    // Strip markdown code fences if present
     const jsonText = rawText
       .replace(/^```(?:json)?\s*/i, "")
       .replace(/\s*```\s*$/, "")
@@ -58,124 +59,162 @@ export default async function handler(req, res) {
     } catch (e) {
       console.error("JSON parse error:", e);
       console.error("Raw response:", rawText);
-      return res.status(500).json({ error: "Failed to parse AI response as JSON", raw: rawText });
+      return res
+        .status(500)
+        .json({ error: "Failed to parse AI response as JSON", raw: rawText });
     }
 
     return res.status(200).json(parsed);
   } catch (error) {
     console.error("Parse claim error:", error);
-    return res.status(500).json({ error: error.message || "Internal server error" });
+    return res
+      .status(500)
+      .json({ error: error.message || "Internal server error" });
   }
 }
 
 function buildParserPrompt() {
   return `You are an expert insurance claim reader for Roofing Force, a roofing contractor.
 
-Read this insurance claim PDF and extract ALL line items plus customer/claim info. Return ONLY valid JSON — no preamble, no markdown fences, no explanation.
+Read this insurance claim PDF and extract ALL line items. Return ONLY valid JSON — no preamble, no markdown fences, no explanation.
 
-CUSTOMER & CLAIM INFO
-Extract the following from the claim header or cover page:
-  - customerName:    The insured's full name. Look for "Insured:", "Named Insured:", or similar labels.
-  - customerAddress: Full property/loss address including city, state, zip. Look for "Property:", "Loss Location:", or "Property Address:".
-  - claimNumber:     The claim or file number. Look for "Claim #", "Claim Number", "File #", "L/R Number", or "Policy Number". Use the most specific claim identifier.
-  - deductible:      The deductible amount for the Dwelling coverage as a plain number.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+DEPRECIATION SYMBOL RULES (apply to EVERY carrier)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-If any field cannot be found, use "" for text fields and 0 for deductible.
+Depreciation appears in two formats in the DEPREC. column:
+  - Angle brackets  <200.00>  = NON-RECOVERABLE depreciation
+  - Parentheses     (200.00)  = RECOVERABLE depreciation
+  - (0.00) or <0.00>          = zero depreciation
 
-DEPRECIATION SYMBOL RULES
-  - Angle brackets  <200.00>  = NON-RECOVERABLE → nonRecoverableDep = 200.00, recoverableDep = 0
-  - Parentheses     (200.00)  = RECOVERABLE → recoverableDep = 200.00, nonRecoverableDep = 0
-  - (0.00) or <0.00> = zero depreciation, both fields = 0
+For EACH line item, record:
+  - recoverableDep:    the dollar amount in parentheses (0 if none)
+  - nonRecoverableDep: the dollar amount in angle brackets (0 if none)
 
-PAID WHEN INCURRED ITEMS
-Some items are code upgrades or "Paid When Incurred" — insurance pays these AFTER work is done and proof submitted.
-These often appear with strikethrough text in the PDF or are noted as "payable when incurred" or "Building Ordinance/Code Upgrade".
-Set paidWhenIncurred: true for these items, false for all others.
-These items still have RCV and ACV values — include them normally, just flag them.
+A single line item can have ONLY one type — never both.
+The sum recoverableDep + nonRecoverableDep equals the total depreciation withheld on that item.
 
-MULTIPLE STRUCTURES
-Include line items from ALL structures. For the section field:
-  - Dwelling roofing → "Roofing"
-  - Dwelling elevations → "Front/Rear/Side Elevation"
-  - Detached Garage roofing → "Detached Garage — Roofing"
-  - Debris/haul → "Debris Removal"
-  - Labor minimums → "Labor Minimums"
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+POLICY TYPE DETECTION (read from the SUMMARY page)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-POLICY TYPE
-"RCV" = mostly recoverable (parentheses) depreciation
-"ACV" = mostly non-recoverable (angle brackets) depreciation
-"MIXED" = significant amounts of both
-"UNKNOWN" = cannot determine
+Determine policyType by reading the summary page carefully:
 
+"RCV" — Full replacement cost policy. Indicators:
+  - Summary shows "Total Recoverable Depreciation" equal to ALL the depreciation withheld
+  - Summary shows "Net Claim if Depreciation is Recovered" = a higher number
+  - No "Non-recoverable" line in summary (or non-rec = $0)
+  - Example carriers: Auto-Owners (Brotherton), USAA, some State Farm
+
+"ACV" — Actual cash value / scheduled roof policy. Indicators:
+  - Summary shows "Less Non-recoverable Depreciation <amount>" and that amount equals ALL depreciation
+  - Summary shows "Total Recoverable Depreciation: 0.00" (or no recoverable dep line)
+  - Customer will NEVER get depreciation back
+  - Example carriers: Farm Bureau (ACV policies), some Auto-Owners
+
+"MIXED" — Partial RCV policy. Indicators:
+  - Summary shows BOTH a non-recoverable dep amount AND a recoverable dep amount
+  - The summary explicitly lists "Less Non-Recoverable Depreciation <X>" followed by "Total Recoverable Depreciation Y" where Y > 0
+  - Example: Farmers Insurance often withholds non-rec dep on roof materials but allows recovery on gutters/windows/siding
+
+"UNKNOWN" — Use only if you cannot determine the policy type.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+O&P DETECTION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Some carriers include General Contractor Overhead and Profit:
+  - State Farm: Look for "General Contractor Overhead" and "General Contractor Profit" lines in the summary or line items
+  - USAA: Has a dedicated O&P column in the line items (often 0.00 on each line)
+  - Xactimate-based: May show O&P as separate line items at the bottom of sections
+
+If O&P is present as separate line items, include them in the line items array like any other item.
+Set hasOP: true in the result if any O&P is detected (whether in line items or as summary additions).
+Set opTotal: the total O&P dollar amount if detectable, or 0 if not present.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 CARRIER COLUMN FORMAT REFERENCE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 State Farm / Xactimate / Farmers: QUANTITY | UNIT PRICE | TAX | RCV | AGE/LIFE | COND. | DEP% | DEPREC. | ACV
-Auto-Owners: DESCRIPTION | QUANTITY | UNIT PRICE | TAX | RCV | DEPREC. | ACV
-USAA (Allcat): QUANTITY | UNIT | TAX | O&P | RCV | AGE/LIFE | DEPREC. | ACV
+Farm Bureau (Xactimate):          QUANTITY | UNIT | TAX | RCV | AGE/LIFE | COND. | DEP% | DEPREC. | ACV
+Auto-Owners:                      DESCRIPTION | QUANTITY | UNIT PRICE | TAX | RCV | DEPREC. | ACV
+USAA (Allcat):                    QUANTITY | UNIT | TAX | O&P | RCV | AGE/LIFE | DEPREC. | ACV
 
-SUMMARY VALUES
-If multiple summary pages exist, ADD them together.
-  - summaryRCV: Total Replacement Cost Value
-  - summaryNonRecDep: Total non-recoverable depreciation (positive number)
-  - summaryRecDep: Total recoverable depreciation (positive number)
-  - summaryTotalDep: summaryNonRecDep + summaryRecDep
-  - summaryACV: Total Actual Cash Value
-  - summaryDeductible: Deductible (positive number)
-  - summaryNetClaim: Total Net Claim
-  - summaryNetIfRecovered: Net Claim if Depreciation Recovered (0 if absent)
-  - summaryPriorPayments: Prior payments already made (positive number, 0 if none)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SUMMARY PAGE VALUES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-OUTPUT FORMAT — return exactly this structure:
+Extract these from the claim's Summary page (match them EXACTLY to what is printed):
+  - summaryRCV:             The "Replacement Cost Value" total
+  - summaryNonRecDep:       "Less Non-recoverable Depreciation" (as a positive number, 0 if absent)
+  - summaryRecDep:          "Total Recoverable Depreciation" (as a positive number, 0 if absent)
+  - summaryTotalDep:        Total depreciation withheld (nonRec + rec)
+  - summaryACV:             "Actual Cash Value"
+  - summaryDeductible:      "Less Deductible" (as a positive number)
+  - summaryNetClaim:        "Net Claim"
+  - summaryNetIfRecovered:  "Net Claim if Depreciation is Recovered" (0 if absent)
+
+These numbers MUST match the claim's own summary page. Do not calculate them — read them.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+OUTPUT FORMAT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Return this exact JSON structure:
+
 {
-  "customerName": "Joshua Martin",
-  "customerAddress": "284 Polk Road 119, Mena, AR 71953",
-  "claimNumber": "018864312-90A",
-  "carrier": "USAA",
+  "carrier": "State Farm",
   "policyType": "RCV",
   "hasOP": false,
   "opTotal": 0,
-  "summaryRCV": 26848.10,
+  "summaryRCV": 7116.96,
   "summaryNonRecDep": 0,
-  "summaryRecDep": 10628.99,
-  "summaryTotalDep": 10628.99,
-  "summaryACV": 16219.11,
-  "summaryDeductible": 10000.00,
-  "summaryNetClaim": 539.67,
-  "summaryNetIfRecovered": 11168.66,
-  "summaryPriorPayments": 5342.66,
+  "summaryRecDep": 1623.66,
+  "summaryTotalDep": 1623.66,
+  "summaryACV": 5493.30,
+  "summaryDeductible": 1000.00,
+  "summaryNetClaim": 4493.30,
+  "summaryNetIfRecovered": 6116.96,
   "lineItems": [
     {
       "lineNumber": 1,
-      "description": "Remove 3 tab - 25 yr. - composition shingle roofing - incl. felt",
-      "quantity": "55.90 SQ",
-      "rcv": 3252.82,
+      "description": "Tear off composition shingles - Laminated (no haul off)",
+      "quantity": "14.44 SQ",
+      "rcv": 920.98,
       "recoverableDep": 0,
       "nonRecoverableDep": 0,
-      "acv": 3252.82,
-      "section": "Roofing",
-      "paidWhenIncurred": false
+      "acv": 920.98
     },
     {
-      "lineNumber": 7,
-      "description": "Ice & water barrier",
-      "quantity": "1442.42 SF",
-      "rcv": 2322.22,
-      "recoverableDep": 0,
+      "lineNumber": 2,
+      "description": "Roofing felt - 15 lb.",
+      "quantity": "14.44 SQ",
+      "rcv": 473.82,
+      "recoverableDep": 189.52,
       "nonRecoverableDep": 0,
-      "acv": 2322.22,
-      "section": "Roofing",
-      "paidWhenIncurred": true
+      "acv": 284.30
+    },
+    {
+      "lineNumber": 3,
+      "description": "Laminated - comp. shingle rfg. - w/out felt",
+      "quantity": "14.67 SQ",
+      "rcv": 3765.38,
+      "recoverableDep": 1004.10,
+      "nonRecoverableDep": 0,
+      "acv": 2761.28
     }
   ]
 }
 
-RULES:
-1. Include EVERY numbered line item from EVERY structure — do not skip any.
-2. Use the full description exactly as written.
-3. Dollar amounts as plain numbers, 2 decimal places. No $ or commas.
-4. recoverableDep and nonRecoverableDep always >= 0.
-5. Always include paidWhenIncurred on every line item.
-6. quantity is a string including unit (e.g. "31.92 SQ").
-7. Always include section on every line item.
-8. Read summary values from printed summary pages — do not compute them.
-9. Return ONLY the JSON object.`;
+IMPORTANT RULES:
+1. Include EVERY numbered line item — do not skip any, including steep roof charges, satellite detach/reset, dumpster loads, etc.
+2. For the description field, use the full line item description as written in the claim.
+3. Dollar amounts as plain numbers (no $ signs, no commas). Use 2 decimal places.
+4. recoverableDep and nonRecoverableDep are always >= 0. Never negative.
+5. If a line item has zero depreciation, both recoverableDep and nonRecoverableDep are 0.
+6. The quantity field is a string including the unit (e.g. "34.01 SQ", "255.93 LF", "1.00 EA").
+7. If the claim has multiple coverage sections (Dwelling + Other Structures), include ALL line items from ALL sections.
+8. Read the summary values directly from the printed summary page — do not compute them yourself.
+9. Return ONLY the JSON object — no text before or after it.`;
 }

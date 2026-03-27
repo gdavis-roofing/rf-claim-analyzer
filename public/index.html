@@ -843,6 +843,7 @@ async function generatePDF() {
     firstCheckACV,
     pwiRCV: pwiRCVforPDF,
     summaryNetIfRecovered: parsedData.summaryNetIfRecovered || 0,
+    summaryRCV: parsedData.summaryRCV || 0,
     acceptedItems, declinedItems, mip
   });
 
@@ -1004,11 +1005,11 @@ function buildPDFHTML(d) {
         ${d.mip > 0 ? `<div class="fin-card customer"><div class="fin-label">&#x1F4B5; Money in Pocket</div><div class="fc-value">$${fmtNum(d.mip)}</div><div class="fc-note">Declined ACV - deductible</div></div>` : ""}
   <div class="timeline">
     <div class="tl-title">Payment Breakdown</div>
-    <div class="tl-row"><span>Total Replacement Cost Value (RCV)</span><span>$${fmtNum(d.rcvContracted)}</span></div>
+    <div class="tl-row"><span>Total Replacement Cost Value (RCV)</span><span>$${fmtNum(d.summaryRCV)}</span></div>
     <div class="tl-row"><span>Less Recoverable Depreciation (held by insurer)</span><span>−$${fmtNum(d.recDepContracted)}</span></div>
     <div class="tl-row"><span>Less Non-Recoverable Depreciation</span><span>−$${fmtNum(d.nonRecDepContracted)}</span></div>
-    ${d.taxMethod === 'summary' && d.contractedTax > 0 ? `
-    <div class="tl-row tax-row"><span>⚠ Sales Tax (${d.taxRate}% on materials — ${d.carrier} applies at summary level)</span><span>+$${fmtNum(d.contractedTax)}</span></div>` : ''}
+    ${d.taxMethod === 'summary' && d.taxAmount > 0 ? `
+    <div class="tl-row tax-row"><span>⚠ Sales Tax (${d.taxRate}% on materials — ${d.carrier} applies at summary level)</span><span style="font-style:italic;color:#886600">included in RCV above</span></div>` : ''}
     <div class="tl-row"><span>Less Deductible</span><span>−$${fmtNum(d.deductible)}</span></div>
     <div class="tl-row"><span><strong>Initial Insurance Payment (ACV)</strong></span><span><strong>$${fmtNum(Math.max(0, d.firstCheckACV - d.deductible))}</strong></span></div>
     ${d.recDepContracted > 0 ? `<div class="tl-row"><span>+ Recoverable Depreciation (paid after completion)</span><span>+$${fmtNum(d.recDepContracted)}</span></div>` : ''}

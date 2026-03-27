@@ -716,7 +716,7 @@ function recalcOOP() {
   }
   const taxAdjustedACV = allScopeACV + taxAmount;
 
-  const firstCheck = parsedData.summaryACV || 0;
+  const trueACV = (parsedData.summaryRCV || 0) - (parsedData.summaryRecDep || 0) - (parsedData.summaryNonRecDep || 0); const firstCheck = Math.max(0, trueACV - deductible);
   const secondCheck = recDepContracted + pwiRCV;
   const oop = Math.max(0, deductible + nonRecDepContracted);
 

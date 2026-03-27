@@ -883,14 +883,14 @@ function buildPDFHTML(d) {
     </tr>`).join('');
 
   // ── TAX ROW (for summary-tax carriers) ──
-  const taxRowHTML = (taxAmt) => taxAmt > 0 ? `
+  const taxRowHTML = (taxAmt, infoOnly) => taxAmt > 0 ? `
     <tr style="background:#fffbee">
-      <td style="font-style:italic;color:#886600">Sales Tax (${d.taxRate}% on materials — applied at carrier summary level)</td>
+      <td style="font-style:italic;color:#886600">Sales Tax (${d.taxRate}% on materials — ${d.carrier} applies at summary level)</td>
       <td style="text-align:center">—</td>
-      <td style="text-align:right;color:#886600">$${fmtNum(taxAmt)}</td>
+      <td style="text-align:right;color:#886600;font-style:italic">${infoOnly ? 'included in RCV' : '$'+fmtNum(taxAmt)}</td>
       <td style="text-align:right">—</td>
       <td style="text-align:right">—</td>
-      <td style="text-align:right;color:#886600">$${fmtNum(taxAmt)}</td>
+      <td style="text-align:right;color:#886600;font-style:italic">${infoOnly ? '(see breakdown)' : '$'+fmtNum(taxAmt)}</td>
     </tr>` : '';
 
   // ── SUBTOTAL ROW ──
@@ -912,8 +912,9 @@ function buildPDFHTML(d) {
     acceptedHTML += itemRowsHTML(items);
   });
   // Add tax row then subtotal for contracted
-  acceptedHTML += taxRowHTML(d.contractedTax);
-  acceptedHTML += subtotalRowHTML(d.contractedRCV, d.contractedRecDep, d.contractedNonRecDep, d.contractedACV, 'Contracted Totals');
+  // Tax shown as informational note only — not added to subtotal
+  if (d.contractedTax > 0) acceptedHTML += taxRowHTML(d.contractedTax, true);
+  acceptedHTML += subtotalRowHTML(d.summaryRCV || d.contractedRCV, d.contractedRecDep, d.contractedNonRecDep, d.contractedACV, 'Contracted Totals');
 
   let declinedHTML = '';
   Object.entries(declinedSections).forEach(([sec, items]) => {

@@ -415,7 +415,8 @@
     </div>
 
     <!-- DISCLAIMER -->
-    <div class="disclaimer-box" id="disclaimerBox">
+    <div id="sanityWarnings" style="display:none;margin-bottom:12px;font-size:13px;"></div>
+        <div class="disclaimer-box" id="disclaimerBox">
       <strong style="color:#aaa">Non-Covered Items</strong> necessary to complete the Project that are outside of the coverage of your insurance policy, including but is not limited to: rotten decking and/or facia, hidden damage, etc., will be your responsibility to pay.
     </div>
 
@@ -837,6 +838,32 @@ async function generatePDF() {
       pwiRCVforPDF += item.rcv || 0;
     }
   });
+
+  // — SANITY CHECK —
+  const warnings = [];
+  const tol = 1.00;
+  const _summaryRCV = parsedData.summaryRCV || 0;
+  const _summaryNetClaim = parsedData.summaryNetClaim || 0;
+  const _summaryRecDep = parsedData.summaryRecDep || 0;
+  const totalContractedPlusDeclined = contractedRCVwTax + declinedRCVwTax;
+  if (Math.abs(totalContractedPlusDeclined - _summaryRCV) > tol)
+    warnings.push(`RCV mismatch: contracted + declined = $${totalContractedPlusDeclined.toFixed(2)} but summary RCV = $${_summaryRCV.toFixed(2)}`);
+  if (Math.abs(firstCheck - _summaryNetClaim) > tol)
+    warnings.push(`1st Check mismatch: $${firstCheck.toFixed(2)} vs summary Net Claim $${_summaryNetClaim.toFixed(2)}`);
+  if (firstCheck < 0)
+    warnings.push(`1st Check is negative: $${firstCheck.toFixed(2)}`);
+  if (_summaryRecDep < 0)
+    warnings.push(`Recoverable depreciation is negative`);
+  const warningBox = document.getElementById('sanityWarnings');
+  if (warningBox) {
+    if (warnings.length > 0) {
+      warningBox.innerHTML = '<strong>⚠ Review Before Generating Report:</strong><ul style="margin:6px 0 0 16px">' + warnings.map(w => `<li>${w}</li>`).join('') + '</ul>';
+      warningBox.style.cssText = 'display:block;background:#fff8e1;border:1px solid #f9a825;border-radius:6px;padding:12px 16px;margin-bottom:12px;color:#333';
+    } else {
+      warningBox.innerHTML = '✅ Numbers verified — all totals balance.';
+      warningBox.style.cssText = 'display:block;background:#e8f5e9;border:1px solid #388e3c;border-radius:6px;padding:12px 16px;margin-bottom:12px;color:#1b5e20';
+    }
+  }
 
   const pdfHTML = buildPDFHTML({
     customerName, customerAddress, claimNumber,

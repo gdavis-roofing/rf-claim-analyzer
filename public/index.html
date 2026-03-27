@@ -798,7 +798,7 @@ async function generatePDF() {
   const declinedACVwTax    = declinedACV    + declinedTax;
 
   const oop = Math.max(0, deductible + contractedNonRecDep - declinedACV);
-  const firstCheckACV = parsedData.summaryACV || 0;
+  const firstCheckACV = (parsedData.summaryRCV || 0) - (parsedData.summaryRecDep || 0) - (parsedData.summaryNonRecDep || 0);
   const pwiPerformedPDF = new Set();
   document.querySelectorAll('.pwi-cb:checked').forEach(cb => {
     pwiPerformedPDF.add(parseInt(cb.dataset.line));

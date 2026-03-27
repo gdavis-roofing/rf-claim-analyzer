@@ -1,3 +1,11 @@
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '10mb',
+    },
+  },
+};
+
 import Anthropic from '@anthropic-ai/sdk';
 import { PDFDocument } from 'pdf-lib';
 

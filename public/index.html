@@ -728,11 +728,7 @@ function recalcOOP() {
   document.getElementById('firstCheck').textContent = '$' + fmtNum(firstCheck);
   document.getElementById('secondCheck').textContent = '$' + fmtNum(secondCheck);
   document.getElementById('oopValue').textContent = '$' + fmtNum(oop);
-    const declinedACV = declinedItems.reduce((s,i) => s + (i.acv||0), 0);
-    const mip = declinedACV - deductible;
-    if (mip > 0) {
-      document.getElementById('mipValue').textContent = '$' + fmtNum(mip);
-      document.getElementById('mipBox').style.display = '';
+    const mip = declinedACV - deductible; if (mip > 0) { document.getElementById("mipValue").textContent = "$" + fmtNum(mip); document.getElementById("mipBox").style.display = ""; }
     }
 }
 

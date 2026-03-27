@@ -411,11 +411,7 @@
         <div class="fin-val" id="oopValue">$0.00</div>
         <div class="fin-sub">Deductible + non-rec dep</div>
       </div>
-        <div class="fin-card green-card" id="mipBox" style="display:none">
-          <div class="fin-label">&#x1F4B5; Money in Pocket</div>
-          <div class="fin-val" id="mipValue">$0.00</div>
-          <div class="fin-sub">Declined ACV &minus; deductible</div>
-        </div>
+        <div class="fin-card green-card" id="mipBox" style="display:none"><div class="fin-label">&#x1F4B5; Money in Pocket</div><div class="fin-val" id="mipValue">$0.00</div><div class="fin-sub">Declined ACV - deductible</div></div>
     </div>
 
     <!-- DISCLAIMER -->
@@ -722,18 +718,16 @@ function recalcOOP() {
   const taxAdjustedACV = allScopeACV + taxAmount;
 
   const trueACV = (parsedData.summaryRCV || 0) - (parsedData.summaryRecDep || 0) - (parsedData.summaryNonRecDep || 0); const firstCheck = Math.max(0, trueACV - deductible);
-    document.getElementById("oopValue").textContent = "$" + fmtNum(oop);
-    const mip = declinedACV - deductible;
-    if (mip > 0) { document.getElementById("mipValue").textContent = "$" + fmtNum(mip); document.getElementById("mipBox").style.display = ""; } else { document.getElementById("mipBox").style.display = "none"; }
+  const secondCheck = recDepContracted + pwiRCV;
   const oop = Math.max(0, deductible + nonRecDepContracted);
 
   document.getElementById('firstCheck').textContent = '$' + fmtNum(firstCheck);
   document.getElementById('secondCheck').textContent = '$' + fmtNum(secondCheck);
   document.getElementById('oopValue').textContent = '$' + fmtNum(oop);
-    const mip = declinedACV - deductible;
-    if (mip > 0) { document.getElementById('mipValue').textContent = '$' + fmtNum(mip); document.getElementById('mipBox').style.display = ''; } else { document.getElementById('mipBox').style.display = 'none'; }
 }
 
+    const mip = declinedACV - deductible;
+    if (mip > 0) { document.getElementById("mipValue").textContent = "$" + fmtNum(mip); document.getElementById("mipBox").style.display = ""; } else { document.getElementById("mipBox").style.display = "none"; }
 // ── GENERATE PDF ──
 async function generatePDF() {
   if (!parsedData) return;

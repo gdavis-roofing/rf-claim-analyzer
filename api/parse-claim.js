@@ -1,16 +1,35 @@
 import Anthropic from '@anthropic-ai/sdk';
+import { PDFDocument } from 'pdf-lib';
+
+async function compressPdfBase64(base64) {
+  const pdfBytes = Buffer.from(base64, 'base64');
+  const srcDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
+  const newDoc = await PDFDocument.create();
+  const pages = await newDoc.copyPages(srcDoc, srcDoc.getPageIndices());
+  pages.forEach(page => newDoc.addPage(page));
+  const compressed = await newDoc.save({ useObjectStreams: true });
+  return Buffer.from(compressed).toString('base64');
+}
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
   try {
     const { pdfBase64 } = req.body;
     if (!pdfBase64) return res.status(400).json({ error: 'No PDF data provided' });
+
+    let finalBase64 = pdfBase64;
+    if (pdfBase64.length > 4000000) {
+      console.log('Large PDF detected, compressing...');
+      finalBase64 = await compressPdfBase64(pdfBase64);
+      console.log(`Compressed: ${pdfBase64.length} -> ${finalBase64.length} chars`);
+    }
+
     const client = new Anthropic();
     const response = await client.messages.create({
       model: 'claude-opus-4-5',
       max_tokens: 8000,
       messages: [{ role: 'user', content: [
-        { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: pdfBase64 } },
+        { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: finalBase64 } },
         { type: 'text', text: 'Read this insurance claim PDF and extract ALL line items. Return ONLY valid JSON — no preamble, no markdown fences, no explanation.\n\nJSON structure:\n{\n  "carrier": "string",\n  "policyType": "RCV",\n  "hasOP": false,\n  "opTotal": 0,\n  "summaryRCV": 0,\n  "summaryRecDep": 0,\n  "summaryNonRecDep": 0,\n  "summaryACV": 0,\n  "summaryDeductible": 0,\n  "summaryNetClaim": 0,\n  "summaryNetIfRecovered": 0,\n  "taxRate": 0,\n  "taxMethod": "summary",\n  "taxAmount": 0,\n  "customerName": "string",\n  "propertyAddress": "string",\n  "claimNumber": "string",\n  "deductible": 0,\n  "lineItems": [{"lineNumber":1,"description":"string","quantity":"1.00 EA","rcv":0,"recoverableDep":0,"nonRecoverableDep":0,"acv":0,"paidWhenIncurred":true,"section":"string"}]\n}\n\nRules: Include every line item. Dollar amounts as plain numbers. Read summary values from the printed summary page. IMPORTANT: For summaryRCV, summaryRecDep, summaryNonRecDep, summaryACV — always use the GRAND TOTAL across ALL coverages, not individual coverage summaries. For USAA/AllCat this is the final "Line Item Totals" row or the Coverage breakdown table showing the combined total of Dwelling + Other Structures + all coverages. For Shelter and Auto-Owners use their single summary page total. Never use a per-coverage subtotal when a grand total is available. For taxRate: extract the sales tax percentage from the summary page (e.g. "9.500%" = 9.5); set taxMethod to "summary" if tax is applied as a bulk line at the summary level, otherwise "line_item"; set taxAmount to the total tax dollar amount. For summaryNetIfRecovered: find the "Net Estimate if Depreciation Is Recovered" or equivalent total on the summary page. For propertyAddress: extract the physical loss/property location address. Check these in order: (1) Look for "Loss Location:" on the cover/first page — Shelter Insurance uses this label and it is the most reliable source. (2) Look for "Property:" label near the insured name. (3) Look for "Property Address:" anywhere in the document. (4) For Shelter, the address also appears as a mailing address block directly under the insured name on page 1 (no label — just street, city, state zip on separate lines). Return the full street address including city, state and zip as a single string. For section: use the structure or area name the line item belongs to (e.g. "Dwelling", "Storage Shed", "Barn", "Detached Garage", "Other Structures") — this comes from the area/section header above the line item in the PDF. For paidWhenIncurred: read ALL notes and comments printed below each line item. Set to true if the notes say "payable when incurred" or "paid when incurred" or "code upgrade cost is payable when incurred". Set to false for all other items. For recoverableDep and nonRecoverableDep: depreciation notation in the PDF uses two different bracket styles. Parentheses (amount) mean RECOVERABLE depreciation — put the value in recoverableDep and set nonRecoverableDep to 0. Angle brackets <amount> mean NON-RECOVERABLE depreciation — put the value in nonRecoverableDep and set recoverableDep to 0. This rule applies universally to all carriers including Auto-Owners, State Farm, Shelter, and USAA. Never assign angle bracket depreciation to recoverableDep. Return ONLY the JSON object.' }
       ]}]
     });

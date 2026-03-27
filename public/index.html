@@ -516,8 +516,7 @@ async function fileToBase64(file) {
     reader.readAsDataURL(file);
   });
   if (base64.length > 4000000) {
-    console.log('Large PDF detected, compressing client-side...');
-    const { PDFDocument } = window.PDFLib;
+    throw new Error('PDF is too large to process. Please compress it first at smallpdf.com/compress-pdf (free, takes 30 seconds), then upload the compressed version.');
     const pdfBytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
     const srcDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
     const newDoc = await PDFDocument.create();

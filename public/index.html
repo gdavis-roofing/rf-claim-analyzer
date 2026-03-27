@@ -723,6 +723,8 @@ function recalcOOP() {
   const secondCheck = effectiveRecDep + pwiRCV;
   const oop = Math.max(0, deductible + nonRecDepContracted);
 
+  const displayRCV = (parsedData.summaryRCV || 0) + pwiRCV;
+  document.getElementById('sumRCV').textContent = '$' + fmtNum(displayRCV);
   document.getElementById('firstCheck').textContent = '$' + fmtNum(firstCheck);
   document.getElementById('secondCheck').textContent = '$' + fmtNum(secondCheck);
   document.getElementById('oopValue').textContent = '$' + fmtNum(oop);

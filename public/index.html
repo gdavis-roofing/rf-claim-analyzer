@@ -726,8 +726,6 @@ function recalcOOP() {
   document.getElementById('oopValue').textContent = '$' + fmtNum(oop);
 }
 
-    const mip = declinedACV - deductible;
-    if (mip > 0) { document.getElementById("mipValue").textContent = "$" + fmtNum(mip); document.getElementById("mipBox").style.display = ""; } else { document.getElementById("mipBox").style.display = "none"; }
 // ── GENERATE PDF ──
 async function generatePDF() {
   if (!parsedData) return;
@@ -801,6 +799,8 @@ async function generatePDF() {
   const declinedACVwTax    = declinedACV    + declinedTax;
 
   const oop = Math.max(0, deductible + contractedNonRecDep - declinedACV);
+    const mip = declinedACVwTax - deductible;
+    if (mip > 0) { document.getElementById("mipValue").textContent = "$" + fmtNum(mip); document.getElementById("mipBox").style.display = ""; } else { document.getElementById("mipBox").style.display = "none"; }
   const firstCheckACV = (parsedData.summaryRCV || 0) - (parsedData.summaryRecDep || 0) - (parsedData.summaryNonRecDep || 0);
   const pwiPerformedPDF = new Set();
   document.querySelectorAll('.pwi-cb:checked').forEach(cb => {

@@ -46,18 +46,19 @@ export default async function handler(req, res) {
     });
 
     const rawText = response.content[0].text;
-
-    // Strip markdown code fences if present
-    const jsonText = rawText
-      .replace(/^```(?:json)?\s*/i, "")
-      .replace(/\s*```\s*$/, "")
-      .trim();
+  const firstBrace = rawText.indexOf("{");
+  const lastBrace = rawText.lastIndexOf("}");
+  const jsonText = (firstBrace !== -1 && lastBrace !== -1)
+    ? rawText.slice(firstBrace, lastBrace + 1)
+    : rawText.trim();
 
     let parsed;
     try {
       parsed = JSON.parse(jsonText);
     } catch (e) {
       console.error("JSON parse error:", e);
+    console.error("Raw text length:", rawText.length);
+    console.error("Raw text first 500:", rawText.substring(0, 500));
       console.error("Raw response:", rawText);
       return res
         .status(500)

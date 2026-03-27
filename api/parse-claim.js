@@ -21,6 +21,7 @@ export default async function handler(req, res) {
     const parsed = JSON.parse(raw.slice(first, last + 1));
     const pwiItems = parsed.lineItems?.filter(i => i.paidWhenIncurred) || [];
     console.log("PWI items found:", pwiItems.length, pwiItems.map(i => i.description));
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
     return res.status(200).json(parsed);
   } catch (error) {
     console.error('Error:', error);

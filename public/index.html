@@ -988,7 +988,7 @@ function buildPDFHTML(d) {
     </div>
   </div>
 
-        ${d.mip > 0 ? `<div class="fin-card insurance"><div class="fin-label">fin-card customer"><div class="fin-label">&#x1F4B5; Money in Pocket#x1F4B5; Money in Pocket</div><div class="fc-value">$${fmtNum(d.mip)}</div><div class="fc-note">Declined ACV - deductible</div></div>` : ""}
+        ${d.mip > 0 ? `<div class="fin-card customer"><div class="fin-label">fin-card insurance"><div class="fin-label">fin-card customer"><div class="fin-label">&#x1F4B5; Money in Pocket#x1F4B5; Money in Pocket#x1F4B5; Money in Pocket</div><div class="fc-value">$${fmtNum(d.mip)}</div><div class="fc-note">Declined ACV - deductible</div></div>` : ""}
   <div class="timeline">
     <div class="tl-title">Payment Breakdown</div>
     <div class="tl-row"><span>Total Replacement Cost Value (RCV)</span><span>$${fmtNum(d.rcvContracted)}</span></div>

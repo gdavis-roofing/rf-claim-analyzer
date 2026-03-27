@@ -414,6 +414,11 @@
     </div>
 
     <!-- DISCLAIMER -->
+        <div class="fin-card green-card" id="mipBox" style="display:none">
+          <div class="fin-label">&#x1F4B5; Money in Pocket</div>
+          <div class="fin-val" id="mipValue">$0.00</div>
+          <div class="fin-sub">Declined ACV &minus; deductible</div>
+        </div>
     <div class="disclaimer-box" id="disclaimerBox">
       <strong style="color:#aaa">Non-Covered Items</strong> necessary to complete the Project that are outside of the coverage of your insurance policy, including but is not limited to: rotten decking and/or facia, hidden damage, etc., will be your responsibility to pay.
     </div>
@@ -723,6 +728,12 @@ function recalcOOP() {
   document.getElementById('firstCheck').textContent = '$' + fmtNum(firstCheck);
   document.getElementById('secondCheck').textContent = '$' + fmtNum(secondCheck);
   document.getElementById('oopValue').textContent = '$' + fmtNum(oop);
+    const declinedACV = declinedItems.reduce((s,i) => s + (i.acv||0), 0);
+    const mip = declinedACV - deductible;
+    if (mip > 0) {
+      document.getElementById('mipValue').textContent = '$' + fmtNum(mip);
+      document.getElementById('mipBox').style.display = '';
+    }
 }
 
 // ── GENERATE PDF ──

@@ -19,6 +19,8 @@ export default async function handler(req, res) {
     const last = raw.lastIndexOf('}');
     if (first === -1 || last === -1) return res.status(500).json({ error: 'Failed to parse AI response as JSON', raw });
     const parsed = JSON.parse(raw.slice(first, last + 1));
+    const pwiItems = parsed.lineItems?.filter(i => i.paidWhenIncurred) || [];
+    console.log("PWI items found:", pwiItems.length, pwiItems.map(i => i.description));
     return res.status(200).json(parsed);
   } catch (error) {
     console.error('Error:', error);

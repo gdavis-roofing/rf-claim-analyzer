@@ -937,7 +937,7 @@ function buildPDFHTML(d) {
   // Add tax row then subtotal for contracted
   // Tax shown as informational note only — not added to subtotal
   if (d.contractedTax > 0) acceptedHTML += taxRowHTML(d.contractedTax, true);
-  acceptedHTML += subtotalRowHTML(d.summaryRCV || d.contractedRCV, d.contractedRecDep, d.contractedNonRecDep, d.contractedACV, 'Contracted Totals');
+  acceptedHTML += subtotalRowHTML(d.contractedRCV, d.contractedRecDep, d.contractedNonRecDep, d.contractedACV, 'Contracted Totals');
 
   let declinedHTML = '';
   Object.entries(declinedSections).forEach(([sec, items]) => {

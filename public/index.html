@@ -151,7 +151,7 @@
   .fin-card.green-card { background: #1a2d1a; border: 1px solid #2a6e2a; }
   .fin-card.red-card { background: #2d1a1a; border: 1px solid #8a2a2a; }
   .fin-label { font-size: 9px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: #aaa; margin-bottom: 3px; }
-  .fin-val { font-size: 15px; font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fin-val { font-size: 13px; font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .fin-card.green-card .fin-val { color: #4caf50; }
   .fin-card.red-card .fin-val { color: #ff6b6b; }
   .fin-sub { font-size: 9px; color: #555; margin-top: 2px; line-height: 1.3; }
@@ -718,7 +718,9 @@ function recalcOOP() {
   const taxAdjustedACV = allScopeACV + taxAmount;
 
   const trueACV = (parsedData.summaryRCV || 0) - (parsedData.summaryRecDep || 0) - (parsedData.summaryNonRecDep || 0); const firstCheck = Math.max(0, trueACV - deductible);
-  const secondCheck = recDepContracted + pwiRCV;
+  const hasDeclined = declinedNums.size > 0;
+  const effectiveRecDep = hasDeclined ? recDepContracted : (parsedData.summaryRecDep || recDepContracted);
+  const secondCheck = effectiveRecDep + pwiRCV;
   const oop = Math.max(0, deductible + nonRecDepContracted);
 
   document.getElementById('firstCheck').textContent = '$' + fmtNum(firstCheck);
@@ -835,7 +837,7 @@ async function generatePDF() {
     // legacy fields still used by payment section
     rcvContracted: contractedRCVwTax,
     acvContracted: contractedACVwTax,
-    recDepContracted: contractedRecDep,
+    recDepContracted: (declinedItems.length === 0) ? (parsedData.summaryRecDep || contractedRecDep) : contractedRecDep,
     nonRecDepContracted: contractedNonRecDep,
     paidByInsurance: Math.max(0, firstCheckACV - deductible),
     firstCheckACV,

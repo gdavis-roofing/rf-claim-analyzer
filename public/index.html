@@ -729,8 +729,6 @@ function recalcOOP() {
   document.getElementById('secondCheck').textContent = '$' + fmtNum(secondCheck);
   document.getElementById('oopValue').textContent = '$' + fmtNum(oop);
     const mip = declinedACV - deductible; if (mip > 0) { document.getElementById("mipValue").textContent = "$" + fmtNum(mip); document.getElementById("mipBox").style.display = ""; }
-    }
-}
 
 // ── GENERATE PDF ──
 async function generatePDF() {

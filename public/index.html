@@ -409,7 +409,7 @@
       <div class="fin-card red-card">
         <div class="fin-label">&#x1F3E0; Out of Pocket</div>
         <div class="fin-val" id="oopValue">$0.00</div>
-        <div class="fin-sub">Deductible + non-rec dep</div>
+        <div class="fin-sub" id="oopSub">Deductible + non-rec dep</div>
       </div>
         <div class="fin-card green-card" id="mipBox" style="display:none"><div class="fin-label">&#x1F4B5; Money in Pocket</div><div class="fin-val" id="mipValue">$0.00</div><div class="fin-sub">Declined ACV - deductible</div></div>
     </div>
@@ -726,6 +726,9 @@ function recalcOOP() {
   document.getElementById('firstCheck').textContent = '$' + fmtNum(firstCheck);
   document.getElementById('secondCheck').textContent = '$' + fmtNum(secondCheck);
   document.getElementById('oopValue').textContent = '$' + fmtNum(oop);
+  document.getElementById('oopSub').textContent = declinedACV > 0
+    ? 'Deductible + non-rec dep − declined ACV'
+    : 'Deductible + non-rec dep';
 }
 
 // ── GENERATE PDF ──
@@ -999,7 +1002,7 @@ function buildPDFHTML(d) {
     <div class="fin-card customer">
       <div class="fc-label">&#x1F3E0; Out of Pocket</div>
       <div class="fc-value">$${fmtNum(d.oop)}</div>
-      <div class="fc-note">Deductible + non-rec dep</div>
+      <div class="fc-note">${d.declinedACV > 0 ? 'Deductible + non-rec dep − declined ACV' : 'Deductible + non-rec dep'}</div>
     </div>
   </div>
 

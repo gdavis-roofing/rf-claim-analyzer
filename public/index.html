@@ -524,7 +524,13 @@ async function fileToBase64(file) {
     const pages = await newDoc.copyPages(srcDoc, srcDoc.getPageIndices());
     pages.forEach(page => newDoc.addPage(page));
     const compressed = await newDoc.save({ useObjectStreams: true });
-    const compressedBase64 = btoa(String.fromCharCode(...new Uint8Array(compressed)));
+    const compressedBytes = new Uint8Array(compressed);
+    let binary = '';
+    const chunkSize = 8192;
+    for (let i = 0; i < compressedBytes.length; i += chunkSize) {
+      binary += String.fromCharCode(...compressedBytes.subarray(i, i + chunkSize));
+    }
+    const compressedBase64 = btoa(binary);
     console.log('Compressed: ' + base64.length + ' -> ' + compressedBase64.length);
     return compressedBase64;
   }

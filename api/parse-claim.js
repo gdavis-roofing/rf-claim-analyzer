@@ -152,7 +152,7 @@ Extract these from the claim's Summary page (match them EXACTLY to what is print
   - summaryTotalDep:        Total depreciation withheld (nonRec + rec)
   - summaryACV:             "Actual Cash Value"
   - summaryDeductible:      "Less Deductible" (as a positive number)
-  - summaryNetClaim:        "Net Claim"
+  - summaryNetClaim:        Total initial payment amount — use the FINAL net payment figure that already has the deductible subtracted. For Shelter this is "Net Estimate", for other carriers this is "Net Claim". This should equal summaryACV minus summaryDeductible.
   - summaryNetIfRecovered:  "Net Claim if Depreciation is Recovered" (0 if absent)
 
 These numbers MUST match the claim's own summary page. Do not calculate them — read them.

@@ -860,7 +860,18 @@ function buildPDFHTML(d) {
     return s;
   };
 
-  const itemRowsHTML = (items) => items.map(i => `
+  const itemRowsHTML = (items) => items.map(i => i.paidWhenIncurred ? `
+    <tr style="background:#f0fff0">
+      <td>
+        <div style="color:#2a6e2a;font-weight:700">${i.description}</div>
+        <div style="font-size:10px;color:#2a6e2a;margin-top:2px">&#9654; PAID WHEN INCURRED — paid by insurance after work is completed</div>
+      </td>
+      <td style="text-align:center;color:#2a6e2a">${i.quantity}</td>
+      <td style="text-align:right;color:#2a6e2a;font-weight:700">$${fmtNum(i.rcv)}</td>
+      <td style="text-align:right">—</td>
+      <td style="text-align:right">—</td>
+      <td style="text-align:right;color:#2a6e2a;font-weight:700">$${fmtNum(i.acv)}</td>
+    </tr>` : `
     <tr>
       <td>${i.description}</td>
       <td style="text-align:center">${i.quantity}</td>

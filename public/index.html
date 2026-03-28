@@ -785,12 +785,15 @@ function recalcOOP() {
   document.getElementById('secondCheck').textContent = '$' + fmtNum(secondCheckRecalc);
   document.getElementById('oopValue').textContent = '$' + fmtNum(oop);
   document.getElementById('oopSub').textContent = declinedACV > 0 ? 'Deductible + non-rec dep − declined ACV' : 'Deductible + non-rec dep';
-      recalcWarnings();
+      recalcWarnings(contractedRCVwTax, declinedRCVwTax, firstCheck);
 }
 
 // ── GENERATE PDF ──
-    function recalcWarnings() {
+    function recalcWarnings(contractedRCVwTax, declinedRCVwTax, firstCheck) {
       if (!parsedData) return;
+      contractedRCVwTax = contractedRCVwTax || 0;
+      declinedRCVwTax = declinedRCVwTax || 0;
+      firstCheck = firstCheck || 0;
       const warnings = [];
       const tol = 1.00;
       const _summaryRCV = parsedData.summaryRCV || 0;
@@ -907,7 +910,7 @@ async function generatePDF() {
   });
 
       // — SANITY CHECK —
-      recalcWarnings();
+      recalcWarnings(contractedRCVwTax, declinedRCVwTax, firstCheck);
 
   const pdfHTML = buildPDFHTML({
     customerName, customerAddress, claimNumber,

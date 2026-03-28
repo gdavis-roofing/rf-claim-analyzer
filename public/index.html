@@ -648,7 +648,13 @@ function renderLineItems(items) {
             </div>
           </td>
           <td class="qty">${item.quantity}</td>
-          <td class="num" style="color:#4caf50">$${fmtNum(item.rcv)}</td>
+          <td class="num" style="color:#4caf50">
+            <input type="number" step="0.01" value="${item.rcv}" 
+              id="pwi-rcv-${item.lineNumber}"
+              style="width:90px;background:#0d1f0d;border:1px solid #2a6e2a;border-radius:4px;color:#4caf50;font-size:12px;padding:3px 6px;text-align:right"
+              oninput="updatePwiRCV(${item.lineNumber}, this.value)"
+              title="Edit if carrier uses a Code Upgrade bucket (e.g. Travelers)">
+          </td>
           <td class="num">—</td>
           <td class="num">—</td>
           <td class="num" style="color:#4caf50">$${fmtNum(item.acv)}</td>
@@ -686,6 +692,18 @@ function toggleDecline(lineNumber, isDeclined) {
 }
 
 // ── FINANCIAL CALCULATIONS ──
+// Store PWI overrides
+const pwiRCVOverrides = {};
+
+function updatePwiRCV(lineNumber, value) {
+  const num = parseFloat(value) || 0;
+  pwiRCVOverrides[lineNumber] = num;
+  // Update the parsedData item so PDF picks it up
+  const item = parsedData.lineItems.find(i => i.lineNumber === lineNumber);
+  if (item) item.rcvOverride = num;
+  recalcOOP();
+}
+
 function recalcOOP() {
   if (!parsedData) return;
 
@@ -711,7 +729,7 @@ function recalcOOP() {
   parsedData.lineItems.forEach(item => {
     if (item.paidWhenIncurred) {
       if (pwiPerformed.has(item.lineNumber)) {
-        pwiRCV += item.rcv || 0;
+        pwiRCV += (item.rcvOverride !== undefined ? item.rcvOverride : item.rcv) || 0;
       }
       return;
     }
@@ -751,7 +769,7 @@ function recalcOOP() {
   document.querySelectorAll('.pwi-cb:checked').forEach(cb => { pwiChecked.add(parseInt(cb.dataset.line)); });
   let pwiRCVrecalc = 0;
   parsedData.lineItems.forEach(item => {
-    if (item.paidWhenIncurred && pwiChecked.has(item.lineNumber)) pwiRCVrecalc += item.rcv || 0;
+    if (item.paidWhenIncurred && pwiChecked.has(item.lineNumber)) pwiRCVrecalc += (item.rcvOverride !== undefined ? item.rcvOverride : item.rcv) || 0;
   });
   const hasDeclinedRecalc = document.querySelectorAll('tr.declined').length > 0;
   const recDepContractedRecalc = parsedData.lineItems.filter(i => !i.paidWhenIncurred).reduce((s,i) => s + (i.recoverableDep||0), 0);
@@ -847,7 +865,7 @@ async function generatePDF() {
   parsedData.lineItems.forEach(item => {
     if (item.paidWhenIncurred && pwiPerformedPDF.has(item.lineNumber)) {
       // Use codeUpgradeRCV (Travelers Code Upgrade bucket) if available, else full item RCV
-      pwiRCVforPDF += parsedData.codeUpgradeRCV || item.rcv || 0;
+      pwiRCVforPDF += (item.rcvOverride !== undefined ? item.rcvOverride : (parsedData.codeUpgradeRCV || item.rcv)) || 0;
     }
   });
 

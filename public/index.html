@@ -785,9 +785,39 @@ function recalcOOP() {
   document.getElementById('secondCheck').textContent = '$' + fmtNum(secondCheckRecalc);
   document.getElementById('oopValue').textContent = '$' + fmtNum(oop);
   document.getElementById('oopSub').textContent = declinedACV > 0 ? 'Deductible + non-rec dep − declined ACV' : 'Deductible + non-rec dep';
+      recalcWarnings();
 }
 
 // ── GENERATE PDF ──
+    function recalcWarnings() {
+      if (!parsedData) return;
+      const warnings = [];
+      const tol = 1.00;
+      const _summaryRCV = parsedData.summaryRCV || 0;
+      const _summaryNetClaim = parsedData.summaryNetClaim || 0;
+      const _summaryRecDep = parsedData.summaryRecDep || 0;
+      const taxLineAdj = parsedData.taxAmount || 0;
+      const totalContractedPlusDeclined = contractedRCVwTax + declinedRCVwTax - taxLineAdj;
+      if (Math.abs(totalContractedPlusDeclined - _summaryRCV) > tol)
+        warnings.push(`RCV mismatch: contracted + declined = $${totalContractedPlusDeclined.toFixed(2)} but summary RCV = $${_summaryRCV.toFixed(2)}`);
+      if (Math.abs(firstCheck - _summaryNetClaim) > tol)
+        warnings.push(`1st Check mismatch: $${firstCheck.toFixed(2)} vs summary Net Claim $${_summaryNetClaim.toFixed(2)}`);
+      if (firstCheck < 0)
+        warnings.push(`1st Check is negative: $${firstCheck.toFixed(2)}`);
+      if (_summaryRecDep < 0)
+        warnings.push(`Recoverable depreciation is negative`);
+      const warningBox = document.getElementById('sanityWarnings');
+      if (warningBox) {
+        if (warnings.length > 0) {
+          warningBox.innerHTML = '<strong>⚠ Review Before Generating Report:</strong><ul style="margin:6px 0 0 16px">' + warnings.map(w => `<li>${w}</li>`).join('') + '</ul>';
+          warningBox.style.cssText = 'display:block;background:#fff8e1;border:1px solid #f9a825;border-radius:6px;padding:12px 16px;margin-bottom:12px;color:#333';
+        } else {
+          warningBox.innerHTML = '✅ Numbers verified — all totals balance.';
+          warningBox.style.cssText = 'display:block;background:#e8f5e9;border:1px solid #388e3c;border-radius:6px;padding:12px 16px;margin-bottom:12px;color:#1b5e20';
+        }
+      }
+    }
+
 async function generatePDF() {
   if (!parsedData) return;
 
@@ -876,31 +906,8 @@ async function generatePDF() {
     }
   });
 
-  // — SANITY CHECK —
-  const warnings = [];
-  const tol = 1.00;
-  const _summaryRCV = parsedData.summaryRCV || 0;
-  const _summaryNetClaim = parsedData.summaryNetClaim || 0;
-  const _summaryRecDep = parsedData.summaryRecDep || 0;
-        const taxLineAdj = parsedData.taxAmount || 0;
-        const totalContractedPlusDeclined = contractedRCVwTax + declinedRCVwTax - taxLineAdj;
-    warnings.push(`RCV mismatch: contracted + declined = $${totalContractedPlusDeclined.toFixed(2)} but summary RCV = $${_summaryRCV.toFixed(2)}`);
-  if (Math.abs(firstCheck - _summaryNetClaim) > tol)
-    warnings.push(`1st Check mismatch: $${firstCheck.toFixed(2)} vs summary Net Claim $${_summaryNetClaim.toFixed(2)}`);
-  if (firstCheck < 0)
-    warnings.push(`1st Check is negative: $${firstCheck.toFixed(2)}`);
-  if (_summaryRecDep < 0)
-    warnings.push(`Recoverable depreciation is negative`);
-  const warningBox = document.getElementById('sanityWarnings');
-  if (warningBox) {
-    if (warnings.length > 0) {
-      warningBox.innerHTML = '<strong>⚠ Review Before Generating Report:</strong><ul style="margin:6px 0 0 16px">' + warnings.map(w => `<li>${w}</li>`).join('') + '</ul>';
-      warningBox.style.cssText = 'display:block;background:#fff8e1;border:1px solid #f9a825;border-radius:6px;padding:12px 16px;margin-bottom:12px;color:#333';
-    } else {
-      warningBox.innerHTML = '✅ Numbers verified — all totals balance.';
-      warningBox.style.cssText = 'display:block;background:#e8f5e9;border:1px solid #388e3c;border-radius:6px;padding:12px 16px;margin-bottom:12px;color:#1b5e20';
-    }
-  }
+      // — SANITY CHECK —
+      recalcWarnings();
 
   const pdfHTML = buildPDFHTML({
     customerName, customerAddress, claimNumber,

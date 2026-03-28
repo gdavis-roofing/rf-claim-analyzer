@@ -796,7 +796,7 @@ function recalcOOP() {
       firstCheck = firstCheck || 0;
       const warnings = [];
       const tol = 1.00;
-      const _summaryRCV = parsedData.summaryRCV || 0;
+      const _summaryRCV = (parsedData.summaryRCV || 0) + (parsedData.codeUpgradeRCV || 0);
       const _summaryNetClaim = parsedData.summaryNetClaim || 0;
       const _summaryRecDep = parsedData.summaryRecDep || 0;
       const taxLineAdj = parsedData.taxAmount || 0;
@@ -918,7 +918,7 @@ async function generatePDF() {
     policyType: parsedData.policyType || '',
     deductible, oop,
     // contracted
-    contractedRCV: parsedData.summaryRCV || contractedRCVwTax,
+    contractedRCV: (parsedData.summaryRCV || 0) + pwiRCVforPDF,
     contractedRecDep,
     contractedNonRecDep,
     contractedACV: contractedACVwTax,

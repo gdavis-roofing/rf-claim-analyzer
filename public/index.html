@@ -855,8 +855,8 @@ async function generatePDF() {
   const _summaryRCV = parsedData.summaryRCV || 0;
   const _summaryNetClaim = parsedData.summaryNetClaim || 0;
   const _summaryRecDep = parsedData.summaryRecDep || 0;
-  const totalContractedPlusDeclined = contractedRCVwTax + declinedRCVwTax;
-  if (Math.abs(totalContractedPlusDeclined - _summaryRCV) > tol)
+        const taxLineAdj = (parsedData.taxMethod === 'line_item' ? (parsedData.taxAmount || 0) : 0);
+        const totalContractedPlusDeclined = contractedRCVwTax + declinedRCVwTax - taxLineAdj;
     warnings.push(`RCV mismatch: contracted + declined = $${totalContractedPlusDeclined.toFixed(2)} but summary RCV = $${_summaryRCV.toFixed(2)}`);
   if (Math.abs(firstCheck - _summaryNetClaim) > tol)
     warnings.push(`1st Check mismatch: $${firstCheck.toFixed(2)} vs summary Net Claim $${_summaryNetClaim.toFixed(2)}`);

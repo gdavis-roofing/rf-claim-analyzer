@@ -747,7 +747,17 @@ function recalcOOP() {
   const displayRCV = (parsedData.summaryRCV || 0) + pwiRCV;
   document.getElementById('sumRCV').textContent = '$' + fmtNum(displayRCV);
   document.getElementById('firstCheck').textContent = '$' + fmtNum(firstCheck);
-  document.getElementById('secondCheck').textContent = '$' + fmtNum(secondCheck);
+  const pwiChecked = new Set();
+  document.querySelectorAll('.pwi-cb:checked').forEach(cb => { pwiChecked.add(parseInt(cb.dataset.line)); });
+  let pwiRCVrecalc = 0;
+  parsedData.lineItems.forEach(item => {
+    if (item.paidWhenIncurred && pwiChecked.has(item.lineNumber)) pwiRCVrecalc += item.rcv || 0;
+  });
+  const hasDeclinedRecalc = document.querySelectorAll('tr.declined').length > 0;
+  const recDepContractedRecalc = parsedData.lineItems.filter(i => !i.paidWhenIncurred).reduce((s,i) => s + (i.recoverableDep||0), 0);
+  const effectiveRecDepRecalc = hasDeclinedRecalc ? recDepContractedRecalc : (parsedData.summaryRecDep || recDepContractedRecalc);
+  const secondCheckRecalc = effectiveRecDepRecalc + pwiRCVrecalc;
+  document.getElementById('secondCheck').textContent = '$' + fmtNum(secondCheckRecalc);
   document.getElementById('oopValue').textContent = '$' + fmtNum(oop);
   document.getElementById('oopSub').textContent = declinedACV > 0 ? 'Deductible + non-rec dep − declined ACV' : 'Deductible + non-rec dep';
 }

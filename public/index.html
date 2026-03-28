@@ -695,6 +695,13 @@ function toggleDecline(lineNumber, isDeclined) {
 // Store PWI overrides
 const pwiRCVOverrides = {};
 
+function updatePwiACV(lineNumber, value) {
+  const num = parseFloat(value) || 0;
+  const item = parsedData.lineItems.find(i => i.lineNumber === lineNumber);
+  if (item) item.acvOverride = num;
+  recalcOOP();
+}
+
 function updatePwiRCV(lineNumber, value) {
   const num = parseFloat(value) || 0;
   pwiRCVOverrides[lineNumber] = num;
@@ -875,7 +882,7 @@ async function generatePDF() {
   const _summaryRCV = parsedData.summaryRCV || 0;
   const _summaryNetClaim = parsedData.summaryNetClaim || 0;
   const _summaryRecDep = parsedData.summaryRecDep || 0;
-        const taxLineAdj = (parsedData.taxMethod === 'line_item' ? (parsedData.taxAmount || 0) : 0);
+        const taxLineAdj = parsedData.taxAmount || 0;
         const totalContractedPlusDeclined = contractedRCVwTax + declinedRCVwTax - taxLineAdj;
     warnings.push(`RCV mismatch: contracted + declined = $${totalContractedPlusDeclined.toFixed(2)} but summary RCV = $${_summaryRCV.toFixed(2)}`);
   if (Math.abs(firstCheck - _summaryNetClaim) > tol)

@@ -915,7 +915,7 @@ async function generatePDF() {
     policyType: parsedData.policyType || '',
     deductible, oop,
     // contracted
-    contractedRCV: (parsedData.summaryRCV || 0) + pwiRCVforPDF,
+    contractedRCV: contractedRCVwTax + pwiRCVforPDF,
     contractedRecDep,
     contractedNonRecDep,
     contractedACV: contractedACVwTax,
@@ -1100,7 +1100,7 @@ function buildPDFHTML(d) {
         ${d.mip > 0 ? `<div class="fin-card customer"><div class="fin-label">&#x1F4B5; Money in Pocket</div><div class="fc-value">$${fmtNum(d.mip)}</div><div class="fc-note">Declined ACV - deductible</div></div>` : ""}
   <div class="timeline">
     <div class="tl-title">Payment Breakdown</div>
-    <div class="tl-row"><span>Total Replacement Cost Value (RCV)</span><span>$${fmtNum(d.summaryRCV)}</span></div>
+    <div class="tl-row"><span>Total Replacement Cost Value (RCV)</span><span>$${fmtNum(d.contractedRCV)}</span></div>
     <div class="tl-row"><span>Less Recoverable Depreciation (held by insurer)</span><span>−$${fmtNum(d.recDepContracted)}</span></div>
     <div class="tl-row"><span>Less Non-Recoverable Depreciation</span><span>−$${fmtNum(d.nonRecDepContracted)}</span></div>
     ${d.taxMethod === 'summary' && d.taxAmount > 0 ? `
@@ -1108,6 +1108,7 @@ function buildPDFHTML(d) {
     <div class="tl-row"><span>Less Deductible</span><span>−$${fmtNum(d.deductible)}</span></div>
     <div class="tl-row"><span><strong>Initial Insurance Payment (ACV)</strong></span><span><strong>$${fmtNum(Math.max(0, d.firstCheckACV - d.deductible))}</strong></span></div>
     ${d.recDepContracted > 0 ? `<div class="tl-row"><span>+ Recoverable Depreciation (paid after completion)</span><span>+$${fmtNum(d.recDepContracted)}</span></div>` : ''}
+    ${d.pwiRCV > 0 ? `<div class="tl-row"><span>+ PWI (paid when work completed)</span><span>+$${fmtNum(d.pwiRCV)}</span></div>` : ''}
   </div>
 
   <div class="supplement-notice">

@@ -915,7 +915,7 @@ async function generatePDF() {
     policyType: parsedData.policyType || '',
     deductible, oop,
     // contracted
-    contractedRCV: contractedRCVwTax + pwiRCVforPDF,
+    contractedRCV: (taxMethod === 'line_item' ? contractedRCVwTax : (parsedData.summaryRCV || 0)) + pwiRCVforPDF,
     contractedRecDep,
     contractedNonRecDep,
     contractedACV: contractedACVwTax,

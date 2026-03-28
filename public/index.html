@@ -784,6 +784,7 @@ async function generatePDF() {
   // ── CONTRACTED TOTALS ──
   let contractedRCV = 0, contractedRecDep = 0, contractedNonRecDep = 0, contractedACV = 0;
   acceptedItems.forEach(i => {
+    if (i.paidWhenIncurred) return; // PWI items excluded — summaryRCV is ground truth
     contractedRCV      += i.rcv || 0;
     contractedRecDep   += i.recoverableDep || 0;
     contractedNonRecDep += i.nonRecoverableDep || 0;
@@ -845,7 +846,8 @@ async function generatePDF() {
   let pwiRCVforPDF = 0;
   parsedData.lineItems.forEach(item => {
     if (item.paidWhenIncurred && pwiPerformedPDF.has(item.lineNumber)) {
-      pwiRCVforPDF += item.rcv || 0;
+      // Use codeUpgradeRCV (Travelers Code Upgrade bucket) if available, else full item RCV
+      pwiRCVforPDF += parsedData.codeUpgradeRCV || item.rcv || 0;
     }
   });
 

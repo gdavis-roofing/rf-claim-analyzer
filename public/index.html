@@ -800,7 +800,8 @@ function recalcOOP() {
       const _summaryNetClaim = parsedData.summaryNetClaim || 0;
       const _summaryRecDep = parsedData.summaryRecDep || 0;
       const taxLineAdj = parsedData.taxAmount || 0;
-      const totalContractedPlusDeclined = contractedRCVwTax + declinedRCVwTax - taxLineAdj;
+      const pwiForWarning = parsedData.codeUpgradeRCV || 0;
+      const totalContractedPlusDeclined = contractedRCVwTax + declinedRCVwTax - taxLineAdj + pwiForWarning;
       if (Math.abs(totalContractedPlusDeclined - _summaryRCV) > tol)
         warnings.push(`RCV mismatch: contracted + declined = $${totalContractedPlusDeclined.toFixed(2)} but summary RCV = $${_summaryRCV.toFixed(2)}`);
       if (Math.abs(firstCheck - _summaryNetClaim) > tol)

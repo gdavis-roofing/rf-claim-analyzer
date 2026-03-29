@@ -1184,6 +1184,28 @@ function buildPDFHTML(d) {
   </div>
 
 </div>
+
+<div id="mobile-toolbar" style="
+  position:fixed;bottom:0;left:0;right:0;
+  background:#fff;border-top:2px solid #cc1e1e;
+  display:flex;gap:10px;padding:12px 16px;
+  box-shadow:0 -2px 10px rgba(0,0,0,0.15);
+  z-index:9999;
+">
+  <button onclick="window.print()" style="
+    flex:1;background:#cc1e1e;color:#fff;border:none;
+    border-radius:8px;padding:12px;font-size:15px;font-weight:700;cursor:pointer;
+  ">&#128438; Save / Share PDF</button>
+  <button onclick="window.close()" style="
+    flex:0 0 auto;background:#eee;color:#333;border:none;
+    border-radius:8px;padding:12px 18px;font-size:15px;font-weight:700;cursor:pointer;
+  ">&#10005; Close</button>
+</div>
+<style>
+  @media print { #mobile-toolbar { display:none !important; } }
+  body { padding-bottom: 80px; }
+</style>
+
 </body>
 </html>`;
 }

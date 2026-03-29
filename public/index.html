@@ -779,7 +779,8 @@ function recalcOOP() {
     if (item.paidWhenIncurred && pwiChecked.has(item.lineNumber)) pwiRCVrecalc += (item.rcvOverride !== undefined ? item.rcvOverride : item.rcv) || 0;
   });
   const hasDeclinedRecalc = document.querySelectorAll('tr.declined').length > 0;
-  const recDepContractedRecalc = parsedData.lineItems.filter(i => !i.paidWhenIncurred).reduce((s,i) => s + (i.recoverableDep||0), 0);
+  const declinedNumsRecalc = new Set(); document.querySelectorAll("tr.declined").forEach(tr => { const n = parseInt(tr.dataset.line); if (!isNaN(n)) declinedNumsRecalc.add(n); });
+  const recDepContractedRecalc = parsedData.lineItems.filter(i => !i.paidWhenIncurred && !declinedNumsRecalc.has(i.lineNumber)).reduce((s,i) => s + (i.recoverableDep||0), 0);
   const effectiveRecDepRecalc = hasDeclinedRecalc ? recDepContractedRecalc : (parsedData.summaryRecDep || recDepContractedRecalc);
   const secondCheckRecalc = effectiveRecDepRecalc + pwiRCVrecalc;
   document.getElementById('secondCheck').textContent = '$' + fmtNum(secondCheckRecalc);

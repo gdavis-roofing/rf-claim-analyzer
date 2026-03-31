@@ -637,7 +637,7 @@ function renderLineItems(items) {
 
     sectionItems.forEach(item => {
       if (item.paidWhenIncurred) {
-        html += `<tr id="row-${item.lineNumber}" style="background:#0d1f0d">
+        html += `<tr id="row-${item.lineNumber}" data-line="${item.lineNumber}" style="background:#0d1f0d">
           <td class="no-strike" style="text-align:center;color:#555" title="PWI items cannot be declined">—</td>
           <td style="color:#666;font-size:11px">${item.lineNumber}</td>
           <td class="desc">
@@ -660,7 +660,7 @@ function renderLineItems(items) {
           <td class="num" style="color:#4caf50">$${fmtNum(item.acv)}</td>
         </tr>`;
       } else {
-        html += `<tr id="row-${item.lineNumber}">
+        html += `<tr id="row-${item.lineNumber}" data-line="${item.lineNumber}">
           <td class="no-strike" style="text-align:center">
             <input type="checkbox" class="decline-cb" onchange="toggleDecline(${item.lineNumber}, this.checked)" title="Mark as declined">
           </td>

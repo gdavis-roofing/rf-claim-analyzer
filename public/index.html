@@ -603,9 +603,10 @@ function renderLineItems(items) {
     <span style="color:#555">|</span>
     <span>${policyType} Policy</span>
     ${parsedData.hasOP ? '<span style="color:#555">|</span><span style="color:#ffa726">O&P Included</span>' : ''}
-    ${parsedData.taxMethod === 'summary' && parsedData.taxAmount > 0 ? '<span style="color:#555">|</span><span style="color:#ffa726">Tax @ Summary</span>' : ''}
+    ${(parsedData.taxMethod === 'summary' || (parsedData.carrier||'').toLowerCase().includes('shelter')) && (parsedData.taxAmount > 0 || parsedData.summaryRCV > parsedData.lineItems.reduce((s,i)=>s+(i.rcv||0),0)) ? '<span style="color:#555">|</span><span style="color:#ffa726">Tax @ Summary</span>' : ''}
   </div>`;
 
+  console.log('RF DEBUG taxMethod:', parsedData.taxMethod, 'taxAmount:', parsedData.taxAmount, 'summaryRCV:', parsedData.summaryRCV, 'lineItemSum:', parsedData.lineItems.reduce((s,i)=>s+(i.rcv||0),0));
   const sections = {};
   items.forEach(item => {
     const sec = item.section || 'Other';
@@ -917,7 +918,7 @@ async function generatePDF() {
     deductible, oop,
     // contracted
     contractedRCV: contractedRCVwTax + pwiRCVforPDF,
-    contractedRecDep,
+    contractedRecDep: contractedRecDep + (taxMethod === 'summary' && taxAmount > 0 ? (parsedData.summaryRecDep || 0) - contractedRecDep - (declinedItems.length > 0 ? declinedRecDep : 0) : 0),
     contractedNonRecDep,
     contractedACV: contractedACVwTax,
     contractedTax,

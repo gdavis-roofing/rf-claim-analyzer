@@ -861,7 +861,7 @@ async function generatePDF() {
   // Fallback: if carrier name contains "Shelter", force summary tax method
   const carrierName = (parsedData.carrier || '').toLowerCase();
   const isShelter = carrierName.includes('shelter');
-  let taxMethod = parsedData.taxMethod || (isShelter ? 'summary' : 'line_item');
+  let taxMethod = isShelter ? 'summary' : (parsedData.taxMethod || 'line_item');
   let taxRate   = parsedData.taxRate   || 0;
   let taxAmount = parsedData.taxAmount || 0;
   // If Shelter detected but taxAmount not parsed, pull from summaryRCV - subtotal

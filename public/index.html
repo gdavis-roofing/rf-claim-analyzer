@@ -769,7 +769,8 @@ function recalcOOP() {
   const secondCheck = effectiveRecDep + pwiRCV;
   const oop = Math.max(0, deductible + nonRecDepContracted);
 
-  const displayRCV = (parsedData.summaryRCV || 0) + pwiRCV;
+  const declinedRCVsum = parsedData.lineItems.filter(i => !i.paidWhenIncurred && declinedNums.has(i.lineNumber)).reduce((s,i) => s+(i.rcv||0), 0);
+  const displayRCV = (parsedData.summaryRCV || 0) - declinedRCVsum + pwiRCV;
   document.getElementById('sumRCV').textContent = '$' + fmtNum(displayRCV);
   document.getElementById('firstCheck').textContent = '$' + fmtNum(firstCheck);
   const pwiChecked = new Set();

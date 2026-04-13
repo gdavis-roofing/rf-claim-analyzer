@@ -48,7 +48,21 @@ export default async function handler(req, res) {
     const parsed = JSON.parse(raw.slice(first, last + 1));
     const pwiItems = parsed.lineItems?.filter(i => i.paidWhenIncurred) || [];
     console.log('PWI items found:', pwiItems.length, pwiItems.map(i => i.description));
-      console.log('PARSED DATA:', JSON.stringify({taxMethod: parsed.taxMethod, taxRate: parsed.taxRate, taxAmount: parsed.taxAmount, summaryRCV: parsed.summaryRCV}));
+      // Auto-correct taxMethod: if summaryRCV matches line item sum, tax is baked in (line_item)
+  // Shelter always stays summary regardless
+  const _isShelt = (parsed.carrier||'').toLowerCase().includes('shelter');
+  if (!_isShelt) {
+    const _lineSum = (parsed.lineItems||[]).filter(i=>!i.paidWhenIncurred).reduce((s,i)=>s+(i.rcv||0),0);
+    const _gap = (parsed.summaryRCV||0) - _lineSum;
+    if (_gap < 1.00) {
+      parsed.taxMethod = 'line_item';
+      parsed.taxAmount = 0;
+      parsed.taxRate = 0;
+    } else {
+      parsed.taxMethod = 'summary';
+    }
+  }
+  console.log('PARSED DATA:', JSON.stringify({taxMethod: parsed.taxMethod, taxRate: parsed.taxRate, taxAmount: parsed.taxAmount, summaryRCV: parsed.summaryRCV}));
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
     return res.status(200).json(parsed);
   } catch (error) {

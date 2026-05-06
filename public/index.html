@@ -514,6 +514,48 @@ async function parseClaim() {
   }
 }
 
+async function rasterizePDF(base64, targetBytes) {
+  const spinnerText = document.querySelector('.spinner-text');
+  const pdfBytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+  const pdf = await pdfjsLib.getDocument({ data: pdfBytes }).promise;
+  const numPages = pdf.numPages;
+  const attempts = [
+    { scale: 1.5, quality: 0.82 },
+    { scale: 1.2, quality: 0.78 },
+    { scale: 1.0, quality: 0.72 },
+    { scale: 0.85, quality: 0.65 },
+  ];
+  for (const { scale, quality } of attempts) {
+    const newDoc = await PDFLib.PDFDocument.create();
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    for (let i = 1; i <= numPages; i++) {
+      if (spinnerText) spinnerText.textContent = `Compressing... page ${i}/${numPages}`;
+      const page = await pdf.getPage(i);
+      const viewport = page.getViewport({ scale });
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      await page.render({ canvasContext: ctx, viewport }).promise;
+      const jpegBase64 = canvas.toDataURL('image/jpeg', quality).split(',')[1];
+      const jpegBytes = Uint8Array.from(atob(jpegBase64), c => c.charCodeAt(0));
+      const img = await newDoc.embedJpg(jpegBytes);
+      const p = newDoc.addPage([viewport.width, viewport.height]);
+      p.drawImage(img, { x: 0, y: 0, width: viewport.width, height: viewport.height });
+    }
+    const saved = await newDoc.save();
+    let binary = '';
+    for (let i = 0; i < saved.length; i += 8192) binary += String.fromCharCode(...saved.subarray(i, i + 8192));
+    const result = btoa(binary);
+    if (spinnerText) spinnerText.textContent = `Compressed to ${(result.length/1024/1024).toFixed(1)}MB`;
+    if (result.length < targetBytes || quality === 0.65) {
+      if (spinnerText) spinnerText.textContent = 'Reading claim...';
+      return result;
+    }
+  }
+}
+
 async function fileToBase64(file) {
   const base64 = await new Promise((resolve, reject) => {
     const reader = new FileReader();

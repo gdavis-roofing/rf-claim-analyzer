@@ -485,7 +485,12 @@ async function parseClaim() {
   document.getElementById('emptyState').style.display = 'flex';
 
   try {
-    const pdfBase64 = await fileToBase64(selectedFile);
+    let pdfBase64 = await fileToBase64(selectedFile);
+
+    if (pdfBase64.length > 4000000) {
+      document.querySelector('.spinner-text').textContent = 'Compressing large PDF...';
+      pdfBase64 = await rasterizePDF(pdfBase64, 4000000);
+    }
 
     const response = await fetch('/api/parse-claim', {
       method: 'POST',

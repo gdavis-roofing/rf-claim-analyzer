@@ -521,24 +521,6 @@ async function fileToBase64(file) {
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
-  if (base64.length > 4000000) {
-    const pdfBytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
-    const srcDoc = await PDFLib.PDFDocument.load(pdfBytes, { ignoreEncryption: true });
-    const newDoc = await PDFLib.PDFDocument.create();
-    const pages = await newDoc.copyPages(srcDoc, srcDoc.getPageIndices());
-    pages.forEach(page => newDoc.addPage(page));
-    const compressed = await newDoc.save({ useObjectStreams: true });
-    const compressedBytes = new Uint8Array(compressed);
-    let binary = '';
-    const chunkSize = 8192;
-    for (let i = 0; i < compressedBytes.length; i += chunkSize) {
-      binary += String.fromCharCode(...compressedBytes.subarray(i, i + chunkSize));
-    }
-    const compressedBase64 = btoa(binary);
-    console.log('Compressed: ' + base64.length + ' -> ' + compressedBase64.length);
-    console.log('Compressed: ' + base64.length + ' -> ' + compressedBase64.length);
-    if (compressedBase64.length > 4000000) throw new Error('PDF is still too large after compression. Please compress it manually at ilovepdf.com then re-upload.');
-  }
   return base64;
 }
 

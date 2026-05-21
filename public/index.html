@@ -410,7 +410,6 @@
         <div class="fin-label">&#x1F3E0; Out of Pocket</div>
         <div class="fin-val" id="oopValue">$0.00</div>
         <div class="fin-sub" id="oopSub">Deductible + non-rec dep</div>
-        <div class="fin-note" id="oopCredit" style="display:none;font-size:11px;color:#888;margin-top:4px;font-style:italic"></div>
       </div>
     </div>
 
@@ -830,13 +829,6 @@ function recalcOOP() {
   document.getElementById('secondCheck').textContent = '$' + fmtNum(secondCheckRecalc);
   document.getElementById('oopValue').textContent = '$' + fmtNum(oop);
   document.getElementById('oopSub').textContent = declinedACV > 0 ? 'Deductible + non-rec dep − declined ACV (incl. tax)' : 'Deductible + non-rec dep';
-  const oopCreditEl = document.getElementById('oopCredit');
-  if (declinedCreditRecalc > 0) {
-    oopCreditEl.textContent = '(includes $' + fmtNum(declinedCreditRecalc) + ' credit from declined scope)';
-    oopCreditEl.style.display = '';
-  } else {
-    oopCreditEl.style.display = 'none';
-  }
       recalcWarnings();
 }
 
@@ -947,13 +939,6 @@ async function generatePDF() {
   const declinedCredit = Math.max(0, declinedACVwTax - deductible);
   const oop = Math.max(0, deductible + contractedNonRecDep - declinedACVwTax);
   const mip = declinedCredit; // kept for backward-compat with d.mip footnote in PDF
-  const oopCreditEl = document.getElementById('oopCredit');
-  if (declinedCredit > 0) {
-    oopCreditEl.textContent = '(includes $' + fmtNum(declinedCredit) + ' credit from declined scope)';
-    oopCreditEl.style.display = '';
-  } else {
-    oopCreditEl.style.display = 'none';
-  }
   const firstCheckACV = (parsedData.summaryRCV || 0) - (parsedData.summaryRecDep || 0) - (parsedData.summaryNonRecDep || 0);
   const pwiPerformedPDF = new Set();
   document.querySelectorAll('.pwi-cb:checked').forEach(cb => {
@@ -1155,7 +1140,6 @@ function buildPDFHTML(d) {
       <div class="fc-label">&#x1F3E0; Out of Pocket</div>
       <div class="fc-value">$${fmtNum(d.oop)}</div>
       <div class="fc-note">${d.declinedACV > 0 ? 'Deductible + non-rec dep − declined ACV (incl. tax)' : 'Deductible + non-rec dep'}</div>
-      ${d.mip > 0 ? `<div class="fc-note" style="font-size:10px;color:#888;font-style:italic;margin-top:2px">(includes $${fmtNum(d.mip)} credit from declined scope)</div>` : ''}
     </div>
   </div>
 

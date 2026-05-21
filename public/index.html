@@ -410,8 +410,8 @@
         <div class="fin-label">&#x1F3E0; Out of Pocket</div>
         <div class="fin-val" id="oopValue">$0.00</div>
         <div class="fin-sub" id="oopSub">Deductible + non-rec dep</div>
+        <div class="fin-note" id="oopCredit" style="display:none;font-size:11px;color:#888;margin-top:4px;font-style:italic"></div>
       </div>
-        <div class="fin-card green-card" id="mipBox" style="display:none"><div class="fin-label">&#x1F4B5; Money in Pocket</div><div class="fin-val" id="mipValue">$0.00</div><div class="fin-sub">Declined ACV - deductible</div></div>
     </div>
 
     <!-- DISCLAIMER -->
@@ -802,7 +802,15 @@ function recalcOOP() {
   const hasDeclined = declinedNums.size > 0;
   const effectiveRecDep = hasDeclined ? recDepContracted : (parsedData.summaryRecDep || recDepContracted);
   const secondCheck = effectiveRecDep + pwiRCV;
-  const oop = Math.max(0, deductible + nonRecDepContracted);
+  // Apportion summary-level tax to declined scope so on-screen OOP matches the
+  // PDF calc (which also nets declined tax into OOP).
+  let declinedTaxRecalc = 0;
+  if (effectiveTaxMethod === 'summary' && taxAmount > 0 && allScopeACV > 0) {
+    declinedTaxRecalc = taxAmount * (declinedACV / allScopeACV);
+  }
+  const declinedACVwTaxRecalc = declinedACV + declinedTaxRecalc;
+  const declinedCreditRecalc = Math.max(0, declinedACVwTaxRecalc - deductible);
+  const oop = Math.max(0, deductible + nonRecDepContracted - declinedACVwTaxRecalc);
 
   const declinedRCVsum = parsedData.lineItems.filter(i => !i.paidWhenIncurred && declinedNums.has(i.lineNumber)).reduce((s,i) => s+(i.rcv||0), 0);
   const displayRCV = (parsedData.summaryRCV || 0) - declinedRCVsum + pwiRCV;
@@ -821,7 +829,14 @@ function recalcOOP() {
   const secondCheckRecalc = effectiveRecDepRecalc + pwiRCVrecalc;
   document.getElementById('secondCheck').textContent = '$' + fmtNum(secondCheckRecalc);
   document.getElementById('oopValue').textContent = '$' + fmtNum(oop);
-  document.getElementById('oopSub').textContent = declinedACV > 0 ? 'Deductible + non-rec dep − declined ACV' : 'Deductible + non-rec dep';
+  document.getElementById('oopSub').textContent = declinedACV > 0 ? 'Deductible + non-rec dep − declined ACV (incl. tax)' : 'Deductible + non-rec dep';
+  const oopCreditEl = document.getElementById('oopCredit');
+  if (declinedCreditRecalc > 0) {
+    oopCreditEl.textContent = '(includes $' + fmtNum(declinedCreditRecalc) + ' credit from declined scope)';
+    oopCreditEl.style.display = '';
+  } else {
+    oopCreditEl.style.display = 'none';
+  }
       recalcWarnings();
 }
 
@@ -927,9 +942,18 @@ async function generatePDF() {
   const declinedRCVwTax    = declinedRCV    + declinedTax;
   const declinedACVwTax    = declinedACV    + declinedTax;
 
-  const oop = Math.max(0, deductible + contractedNonRecDep - declinedACV);
-    const mip = declinedACVwTax - deductible;
-    if (mip > 0) { document.getElementById("mipValue").textContent = "$" + fmtNum(mip); document.getElementById("mipBox").style.display = ""; } else { document.getElementById("mipBox").style.display = "none"; }
+  // Net the declined-scope ACV (incl. tax) into Out of Pocket; surface the credit
+  // as a footnote on the OOP card instead of a separate Money-in-Pocket card.
+  const declinedCredit = Math.max(0, declinedACVwTax - deductible);
+  const oop = Math.max(0, deductible + contractedNonRecDep - declinedACVwTax);
+  const mip = declinedCredit; // kept for backward-compat with d.mip footnote in PDF
+  const oopCreditEl = document.getElementById('oopCredit');
+  if (declinedCredit > 0) {
+    oopCreditEl.textContent = '(includes $' + fmtNum(declinedCredit) + ' credit from declined scope)';
+    oopCreditEl.style.display = '';
+  } else {
+    oopCreditEl.style.display = 'none';
+  }
   const firstCheckACV = (parsedData.summaryRCV || 0) - (parsedData.summaryRecDep || 0) - (parsedData.summaryNonRecDep || 0);
   const pwiPerformedPDF = new Set();
   document.querySelectorAll('.pwi-cb:checked').forEach(cb => {
@@ -1130,11 +1154,11 @@ function buildPDFHTML(d) {
     <div class="fin-card customer">
       <div class="fc-label">&#x1F3E0; Out of Pocket</div>
       <div class="fc-value">$${fmtNum(d.oop)}</div>
-      <div class="fc-note">${d.declinedACV > 0 ? 'Deductible + non-rec dep − declined ACV' : 'Deductible + non-rec dep'}</div>
+      <div class="fc-note">${d.declinedACV > 0 ? 'Deductible + non-rec dep − declined ACV (incl. tax)' : 'Deductible + non-rec dep'}</div>
+      ${d.mip > 0 ? `<div class="fc-note" style="font-size:10px;color:#888;font-style:italic;margin-top:2px">(includes $${fmtNum(d.mip)} credit from declined scope)</div>` : ''}
     </div>
   </div>
 
-        ${d.mip > 0 ? `<div class="fin-card customer"><div class="fin-label">&#x1F4B5; Money in Pocket</div><div class="fc-value">$${fmtNum(d.mip)}</div><div class="fc-note">Declined ACV - deductible</div></div>` : ""}
   <div class="timeline">
     <div class="tl-title">Payment Breakdown</div>
     <div class="tl-row"><span>Total Replacement Cost Value (RCV)</span><span>$${fmtNum(d.contractedRCV)}</span></div>
